@@ -1,0 +1,2353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PULSO · Breath</title>
+  <meta name="description" content="PULSO Breath: ensaya entrevistas por voz con Marta en un espacio 3D. Mide muletillas, ritmo, tiempo de respuesta y contacto visual, sin inferir emociones. Para mayores de 18 años.">
+  <meta name="theme-color" content="#050507">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 fill=%27%23050507%27/%3E%3Ctext x=%278%27 y=%2748%27 font-family=%27Arial,Helvetica,sans-serif%27 font-weight=%27900%27 font-size=%2744%27 fill=%27%23EEEBE3%27%3EP%3C/text%3E%3Crect x=%2742%27 y=%2740%27 width=%278%27 height=%278%27 fill=%27%23E0115F%27/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script type="importmap">
+  { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  } }
+  </script>
+  <style>
+    /* ===== Breath UI · tres tonos: Void Black, Alabaster y Pulse Crimson ===== */
+    :root {
+      --void: #050507;
+      --alabaster: #EEEBE3;
+      --crimson: #E0115F;        /* Pulse Crimson: el punto del logotipo */
+      --crimson-hi: #FF4F93;     /* crimson para texto sobre negro */
+      --crimson-glow: rgba(224, 17, 95, .45);
+      --ink: #111114;
+      --f-title: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
+      --f-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --f-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+      /* tokens del espacio activo (Frecuencia Base = claro) */
+      --fg: var(--ink);
+      --fg-muted: #55545C;
+      --glass: rgba(255, 255, 255, .52);
+      --glass-line: rgba(17, 17, 20, .10);
+      --glass-hi: rgba(255, 255, 255, .8);
+      --tone: rgba(17, 17, 20, .06);
+      color-scheme: light;
+    }
+    body[data-dim="cal"], body[data-dim="sala"] {
+      --fg: var(--alabaster);
+      --fg-muted: rgba(238, 235, 227, .62);
+      --glass: rgba(255, 255, 255, .045);
+      --glass-line: rgba(238, 235, 227, .13);
+      --glass-hi: rgba(255, 255, 255, .09);
+      --tone: rgba(238, 235, 227, .07);
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; }
+    body { background: var(--alabaster); color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; transition: background-color 1.2s ease, color .6s ease; }
+    body[data-dim="cal"] { background: #141417; }
+    body[data-dim="sala"] { background: var(--void); }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    [hidden], .hidden { display: none !important; }
+    :focus-visible { outline: 2px solid var(--crimson); outline-offset: 3px; }
+    h1, h2, h3 { font-family: var(--f-title); font-weight: 600; letter-spacing: -0.035em; margin: 0; text-wrap: balance; }
+    p { margin: 0; text-wrap: pretty; }
+    .mono, .tabular { font-family: var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+    .label { font-family: var(--f-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--fg-muted); }
+    .muted { color: var(--fg-muted); } .ink { color: var(--fg); }
+    .t-small { font-size: 14px; line-height: 1.5; } .t-body { font-size: 16px; }
+    .font-semibold { font-weight: 600; }
+    .flex { display: flex; } .gap-3 { gap: 12px; } .shrink-0 { flex-shrink: 0; } .rounded-full { border-radius: 50%; }
+    .w-2\.5 { width: 10px; } .h-2\.5 { height: 10px; } .mt-1 { margin-top: 4px; } .mt-5 { margin-top: 16px; } .mt-\[9px\] { margin-top: 8px; }
+    .p-3 { padding: 10px; } .p-4 { padding: 14px; } .align-top { vertical-align: top; } .bg-tone { background: var(--tone); border-radius: 10px; }
+    .italic { font-style: italic; }
+    .fade-in { animation: fadeIn .45s ease both; }
+    @keyframes fadeIn { from { opacity: 0; filter: blur(6px); transform: translateY(4px); } to { opacity: 1; filter: none; transform: none; } }
+    .pulse-dot { animation: pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: .3; } }
+    .filler { background: rgba(224, 17, 95, .18); color: var(--crimson-hi); padding: 0 3px; border-radius: 3px; text-decoration: underline wavy var(--crimson); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+    body[data-dim="base"] .filler { color: #A80D47; }
+
+    /* ===== Lienzo 3D y capa de interfaz ===== */
+    #world { position: fixed; inset: 0; width: 100%; height: 100%; display: block; transition: filter .5s ease; }
+    #world.flying { filter: blur(5px); }
+    #ui { position: fixed; inset: 0; pointer-events: none; }
+    #ui > * { pointer-events: auto; }
+
+    /* Navegación: el punto del logotipo es el portal */
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+      padding: calc(18px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) 0 max(20px, env(safe-area-inset-left, 0px)); pointer-events: none; }
+    .nav > * { pointer-events: auto; }
+    .wordmark { display: inline-flex; align-items: baseline; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; font-weight: 800; font-size: 26px; letter-spacing: -0.05em; line-height: 1; color: var(--fg); text-decoration: none; background: none; border: 0; padding: 0; }
+    .wordmark .portal-dot { display: inline-block; width: .19em; height: .19em; margin-left: .05em; background: var(--crimson); box-shadow: 0 0 14px var(--crimson-glow); transition: transform .3s ease; }
+    .wordmark:hover .portal-dot { transform: scale(1.5); }
+    .dims { display: flex; gap: 6px; list-style: none; margin: 0; padding: 4px; border: 1px solid var(--glass-line); border-radius: 999px; background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+    .dims button { display: inline-flex; align-items: center; gap: 8px; border: 0; background: none; padding: 7px 13px; border-radius: 999px; font-family: var(--f-mono); font-size: 12px; letter-spacing: .04em; color: var(--fg-muted); transition: color .3s ease, background-color .3s ease; }
+    .dims button .n { opacity: .6; }
+    .dims button[aria-current="true"] { color: var(--fg); background: var(--glass-hi); }
+    .dims button[aria-current="true"]::before { content: ''; width: 6px; height: 6px; background: var(--crimson); }
+    .dims button:disabled { opacity: .35; cursor: not-allowed; }
+
+    /* ===== Dimensiones: aparecen con desenfoque de profundidad ===== */
+    .dim { position: absolute; inset: 0; opacity: 0; filter: blur(18px); transform: scale(.965); pointer-events: none !important; transition: opacity .9s ease, filter .9s ease, transform .9s cubic-bezier(.2,.7,.2,1); }
+    .dim.on { opacity: 1; filter: none; transform: none; pointer-events: none !important; }
+    .dim.on .holo, .dim.on .hud-el { pointer-events: auto; }
+    .holo { position: absolute; color: var(--fg); background: var(--glass); border: 1px solid var(--glass-line); border-radius: 18px; padding: 26px; backdrop-filter: blur(22px) saturate(1.15); -webkit-backdrop-filter: blur(22px) saturate(1.15);
+      transition: transform .25s ease-out; will-change: transform; }
+    .holo::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,0) 40%); }
+    .holo h1 { font-size: clamp(34px, 3.6vw, 54px); line-height: .98; }
+    .holo h2 { font-size: 24px; line-height: 1.1; }
+    .holo .lead { margin-top: 12px; color: var(--fg-muted); max-width: 40ch; }
+    .scroll { overflow-y: auto; scrollbar-width: thin; }
+
+    /* Botones: mallas sutiles con borde emisivo y atracción magnética */
+    .mag { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 0 22px; border-radius: 999px; border: 1px solid var(--glass-line);
+      background: repeating-linear-gradient(90deg, transparent 0 7px, rgba(127,127,127,.06) 7px 8px), var(--glass); color: var(--fg); font-family: var(--f-title); font-weight: 600; font-size: 15px; letter-spacing: -0.01em;
+      transition: border-color .3s ease, box-shadow .3s ease, transform .2s ease-out, background-color .3s ease; }
+    .mag:hover, .mag:focus-visible { border-color: var(--crimson); box-shadow: 0 0 0 1px var(--crimson), 0 0 22px var(--crimson-glow); }
+    .mag.primary { background: var(--crimson); border-color: var(--crimson); color: #fff; box-shadow: 0 0 24px var(--crimson-glow); }
+    .mag.primary:hover { box-shadow: 0 0 0 1px #fff3, 0 0 36px var(--crimson-glow); }
+    .mag:disabled { opacity: .4; cursor: not-allowed; }
+    .linkbtn { background: none; border: 0; padding: 4px 0; font-weight: 600; color: var(--fg); text-decoration: underline; text-decoration-color: var(--crimson); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+    .linkbtn:hover { color: var(--crimson-hi); }
+    body[data-dim="base"] .linkbtn:hover { color: var(--crimson); }
+
+    /* ===== 1 · Frecuencia Base ===== */
+    #p-base { left: max(24px, 4vw); top: 108px; width: min(420px, 38vw); }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 22px; }
+    .stat { padding: 12px 14px; border: 1px solid var(--glass-line); border-radius: 12px; }
+    .stat .v { font-family: var(--f-mono); font-size: 26px; font-weight: 500; line-height: 1.1; margin-top: 4px; }
+    .stat .v small { font-size: 13px; color: var(--fg-muted); }
+    #p-doc { right: max(24px, 4vw); bottom: 92px; width: min(340px, 34vw); }
+    #docStatus { margin-top: 10px; font-size: 14px; color: var(--fg-muted); }
+    #p-report { right: max(24px, 4vw); top: 96px; bottom: 96px; width: min(560px, 46vw); }
+    #p-report .scroll { position: absolute; inset: 0; padding: 26px; border-radius: inherit; }
+    #hint-electro { left: 50%; bottom: 30px; transform: translateX(-50%); padding: 10px 18px; border-radius: 999px; font-family: var(--f-mono); font-size: 12px; color: var(--fg-muted); white-space: nowrap; }
+    #tip { position: fixed; z-index: 30; pointer-events: none; padding: 10px 14px; border-radius: 12px; font-family: var(--f-mono); font-size: 12px; line-height: 1.6; color: var(--ink); background: rgba(255,255,255,.82); border: 1px solid rgba(17,17,20,.1); backdrop-filter: blur(10px); transform: translate(14px, 14px); }
+    #dropVeil { position: fixed; inset: 0; z-index: 25; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 18vh; pointer-events: none; opacity: 0; transition: opacity .3s ease; }
+    #dropVeil.on { opacity: 1; }
+    #dropVeil p { font-family: var(--f-title); font-size: 22px; font-weight: 600; padding: 14px 22px; border-radius: 999px; background: rgba(255,255,255,.7); border: 1px solid var(--crimson); box-shadow: 0 0 30px var(--crimson-glow); color: var(--ink); }
+
+    /* Informe (motor de la entrevista) */
+    .rep-h { font-size: clamp(28px, 2.6vw, 38px); line-height: 1; }
+    #pe-verdict { font-family: var(--f-title); font-size: 19px; font-weight: 500; margin-top: 12px; }
+    .metric { margin-top: 18px; }
+    .metric .row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    .metric .num { font-family: var(--f-mono); font-size: 26px; font-weight: 500; }
+    .bar { position: relative; height: 6px; margin-top: 8px; background: var(--tone); border-radius: 6px; overflow: hidden; }
+    .bar-fill { height: 100%; width: 0; border-radius: inherit; transition: width .6s ease, background-color .3s ease; }
+    .lvl-none { background: transparent; } .lvl-good { background: var(--fg); } .lvl-warn { background: #8E8C95; } .lvl-bad { background: var(--crimson); }
+    .zone { position: absolute; top: 0; bottom: 0; background: rgba(127,127,127,.22); }
+    .counts { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-top: 18px; }
+    .counts > div { padding: 10px 12px; border: 1px solid var(--glass-line); border-radius: 10px; }
+    .counts .num { font-family: var(--f-mono); font-size: 20px; }
+    #p-report h4 { font-family: var(--f-title); font-size: 16px; margin: 22px 0 8px; }
+    #p-report ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+    #p-report li span:first-child { background: var(--crimson) !important; }
+    #p-report details { margin-top: 22px; }
+    #p-report summary { cursor: pointer; font-weight: 600; }
+    #pe-tableWrap table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+    #pe-tableWrap td, #pe-tableWrap th { text-align: left; border-top: 1px solid var(--glass-line) !important; padding: 8px 6px; vertical-align: top; }
+    #pe-segInfo { display: grid; gap: 8px; margin: 12px 0 0; }
+    #pe-segInfo dd { margin: 2px 0 0; }
+
+    /* ===== 2 · Cámara de Calibración ===== */
+    /* La calibración se puede desplazar: los paneles van en el flujo y nada queda fuera de la pantalla */
+    #dim-cal { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; overflow-y: auto; overscroll-behavior: contain;
+      padding: 100px max(24px, 4vw) 48px; }
+    #dim-cal.on { pointer-events: auto !important; }
+    #dim-cal .holo { position: relative; flex-shrink: 0; }
+    #p-setup { width: min(470px, 46vw); }
+    #p-cam { width: min(420px, 40vw); }
+    .cambox { width: min(100%, 44vh); margin-left: auto; margin-right: auto; }
+    .group { margin-top: 22px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .chip { border: 1px solid var(--glass-line); background: none; border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 500; transition: border-color .3s ease, box-shadow .3s ease, background-color .3s ease; }
+    .chip[aria-pressed="true"] { border-color: var(--crimson); background: rgba(224,17,95,.14); box-shadow: 0 0 16px rgba(224,17,95,.25); }
+    .dials { display: grid; grid-template-columns: 1fr 1.4fr; gap: 14px; margin-top: 10px; }
+    .dial { position: relative; height: 150px; perspective: 520px; border: 1px solid var(--glass-line); border-radius: 14px; overflow: hidden; cursor: ns-resize; touch-action: none; user-select: none; background: linear-gradient(180deg, rgba(0,0,0,.35), transparent 30%, transparent 70%, rgba(0,0,0,.35)); }
+    .dial:focus-visible { outline-offset: 2px; }
+    .dial-drum { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
+    .dial-face { position: absolute; left: 0; right: 0; top: 50%; height: 40px; margin-top: -20px; display: flex; align-items: center; justify-content: center; padding: 0 12px; backface-visibility: hidden; transition: opacity .2s ease, color .2s ease; font-family: var(--f-mono); font-size: 22px; color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dial[data-kind="voice"] .dial-face { font-size: 13px; font-family: var(--f-body); font-weight: 500; }
+    .dial-face.sel { color: var(--fg); }
+    .dial-window { position: absolute; left: 6px; right: 6px; top: 50%; height: 40px; margin-top: -20px; border-top: 1px solid var(--crimson); border-bottom: 1px solid var(--crimson); pointer-events: none; box-shadow: 0 0 18px rgba(224,17,95,.25) inset; transition: box-shadow .4s ease; }
+    .dial.flash .dial-window, .slider.flash { box-shadow: 0 0 0 1px var(--crimson), 0 0 30px var(--crimson-glow), 0 0 30px var(--crimson-glow) inset; }
+    .dial-cap { position: absolute; left: 10px; top: 8px; font-family: var(--f-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--fg-muted); }
+    #hostHint { margin-top: 10px; font-size: 14px; color: var(--fg-muted); min-height: 2.6em; }
+    .slider { display: block; margin-top: 10px; padding: 14px; border: 1px solid var(--glass-line); border-radius: 14px; transition: box-shadow .4s ease; }
+    .slider input[type=range] { width: 100%; accent-color: var(--crimson); height: 26px; }
+    .slider .row { display: flex; justify-content: space-between; font-family: var(--f-mono); font-size: 12px; color: var(--fg-muted); }
+    .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; font-size: 14px; cursor: pointer; }
+    .check input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--crimson); }
+    #pe-seg { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .cambox { position: relative; width: 100%; aspect-ratio: 1 / 1; border-radius: 14px; overflow: hidden; border: 1px solid var(--glass-line); background: #000; margin-top: 16px; }
+    .cambox video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+    #pe-camOff { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; text-align: center; color: var(--fg-muted); font-size: 14px; }
+    #pe-cal { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; background: rgba(5,5,7,.55); }
+    #pe-calText { font-family: var(--f-title); font-size: 19px; font-weight: 600; color: var(--alabaster); }
+    #pe-att { position: absolute; left: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgba(5,5,7,.6); color: var(--alabaster); font-family: var(--f-mono); font-size: 12px; backdrop-filter: blur(8px); }
+    #pe-att.hidden { display: none; }
+    .caption { margin-top: 10px; font-size: 13px; color: var(--fg-muted); }
+    #pe-fileWarn { margin-top: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--crimson); font-size: 13px; }
+    #enterRoom { margin-top: 18px; width: 100%; }
+
+    /* ===== 3 · El Punto Crítico (Sala de Crisis) · HUD táctico ===== */
+    .hud-el { position: absolute; }
+    #hud-tl { left: max(24px, 3vw); top: 92px; max-width: 46vw; }
+    #hud-tl .stage { font-family: var(--f-title); font-size: 24px; font-weight: 600; margin-top: 6px; }
+    #pe-live { margin-top: 10px; align-items: center; gap: 8px; font-family: var(--f-mono); font-size: 12px; color: var(--fg-muted); }
+    #hud-tr { right: max(24px, 3vw); top: 92px; text-align: right; font-family: var(--f-mono); font-size: 12px; color: var(--fg-muted); line-height: 1.9; }
+    #hud-tr b { color: var(--alabaster); font-weight: 500; font-size: 14px; }
+    #hud-chat { right: max(24px, 3vw); top: 190px; bottom: 150px; width: min(340px, 30vw); padding: 0; display: flex; flex-direction: column; }
+    #pe-chat { flex: 1; overflow-y: auto; padding: 18px 18px 6px; scrollbar-width: thin; }
+    #pe-chat > div { margin-top: 14px; }
+    #pe-chat p.t-small { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; }
+    #pe-chat p.italic { font-size: 16px; line-height: 1.5; }
+    #pe-chat p:not(.t-small):not(.italic) { font-size: 15px; line-height: 1.55; }
+    #pe-empty { font-size: 14px !important; font-style: normal !important; }
+    #hud-ctrl { padding: 12px 16px 16px; border-top: 1px solid var(--glass-line); display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+    #pe-end { color: var(--alabaster); }
+    #hud-metrics { left: max(24px, 3vw); bottom: 28px; display: grid; grid-template-columns: repeat(5, auto); gap: 8px; padding: 0; background: none; border: 0; backdrop-filter: none; }
+    .met { min-width: 112px; padding: 10px 14px; border: 1px solid var(--glass-line); border-radius: 12px; background: rgba(255,255,255,.035); backdrop-filter: blur(12px); }
+    .met .v { font-family: var(--f-mono); font-size: 22px; color: var(--alabaster); margin-top: 2px; }
+    .met.bad .v { color: var(--crimson-hi); }
+    #hud-note { left: max(24px, 3vw); bottom: 112px; max-width: 46ch; font-size: 13px; color: var(--fg-muted); background: none; border: 0; padding: 0; backdrop-filter: none; }
+    #hud-prog { left: max(24px, 3vw); top: 190px; width: 220px; background: none; border: 0; padding: 0; backdrop-filter: none; }
+    #hud-prog .bar { background: rgba(238,235,227,.1); }
+    #hud-prog .lvl-good { background: var(--crimson); }
+
+    /* Destello del portal: el punto cuadrado llena la pantalla al cruzar */
+    #portalFlash { position: fixed; left: 50%; top: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px; background: var(--crimson); z-index: 40; pointer-events: none; opacity: 0; transform: scale(0); }
+
+    /* Entrada (igual que la web) */
+    #splash { position: fixed; inset: 0; z-index: 100; background: var(--void); color: var(--alabaster); display: flex; align-items: center; justify-content: center; flex-direction: column; cursor: pointer; transition: opacity .55s ease, visibility .55s ease; }
+    #splash.is-leaving { opacity: 0; visibility: hidden; pointer-events: none; }
+    #splash .splash-mark { font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; font-weight: 800; letter-spacing: -0.05em; line-height: 1; font-size: clamp(64px, 14vw, 200px); white-space: nowrap; transition: transform .55s ease; margin: 0; }
+    #splash.is-leaving .splash-mark { transform: scale(1.04); }
+    #splash .splash-letter { display: inline-block; opacity: 0; transform: translateY(0.18em); animation: splashLetter .55s cubic-bezier(.2,.7,.2,1) forwards; }
+    #splash .splash-dot { display: inline-block; width: 0.19em; height: 0.19em; margin-left: 0.05em; background: var(--crimson); box-shadow: 0 0 40px var(--crimson-glow); vertical-align: baseline; opacity: 0; transform: scale(0); animation: splashDot .5s cubic-bezier(.3,1.6,.5,1) .5s forwards, splashBeat 1.1s ease-in-out 1.05s 2; }
+    #splash .splash-line { width: min(240px, 50vw); height: 2px; margin-top: clamp(28px, 4vw, 44px); background: rgba(238,235,227,.14); overflow: hidden; }
+    #splash .splash-line span { display: block; height: 100%; width: 100%; background: var(--alabaster); transform: scaleX(0); transform-origin: left; animation: splashLoad 1.7s cubic-bezier(.4,0,.2,1) .25s forwards; }
+    #splash .splash-tag { margin-top: 18px; font-size: 15px; color: rgba(238,235,227,.72); opacity: 0; animation: splashFade .6s ease .75s forwards; }
+    @keyframes splashLetter { to { opacity: 1; transform: none; } }
+    @keyframes splashDot { to { opacity: 1; transform: scale(1); } }
+    @keyframes splashBeat { 0%, 100% { transform: scale(1); } 18% { transform: scale(1.45); } 36% { transform: scale(1); } 52% { transform: scale(1.25); } 70% { transform: scale(1); } }
+    @keyframes splashLoad { to { transform: scaleX(1); } }
+    @keyframes splashFade { to { opacity: 1; } }
+    #no3d { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 50; padding: 12px 18px; border-radius: 12px; background: #fff; color: var(--ink); font-size: 14px; border: 1px solid var(--crimson); }
+
+    /* Pantallas pequeñas: los paneles se apilan y se puede desplazar */
+    @media (max-width: 900px) {
+      .dim { overflow-y: auto; padding: 96px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
+      .dim.on { pointer-events: auto !important; }
+      .holo, .hud-el { position: relative !important; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important; width: auto !important; max-width: none !important; transform: none !important; }
+      #p-report { min-height: 70vh; }
+      #hint-electro { display: none; }
+      #hud-metrics { grid-template-columns: repeat(2, minmax(0,1fr)); order: 3; }
+      #hud-chat { height: 46vh; order: 2; }
+      #hud-prog { order: 1; }
+      .dims button .t { display: none; }
+      #dim-cal { display: flex; flex-direction: column; align-items: stretch; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .2s !important; }
+      #splash .splash-letter, #splash .splash-dot, #splash .splash-tag { opacity: 1; transform: none; }
+      #splash .splash-line span { transform: scaleX(1); }
+    }
+  </style>
+</head>
+<body data-dim="base">
+
+  <!-- Entrada -->
+  <div id="splash" role="status" aria-label="Cargando PULSO">
+    <p class="splash-mark" aria-hidden="true"><span class="splash-letter" style="animation-delay:0ms">P</span><span class="splash-letter" style="animation-delay:70ms">U</span><span class="splash-letter" style="animation-delay:140ms">L</span><span class="splash-letter" style="animation-delay:210ms">S</span><span class="splash-letter" style="animation-delay:280ms">O</span><span class="splash-dot"></span></p>
+    <div class="splash-line" aria-hidden="true"><span></span></div>
+    <p class="splash-tag">La presión, ensayada.</p>
+  </div>
+
+  <canvas id="world" aria-hidden="true"></canvas>
+  <div id="portalFlash" aria-hidden="true"></div>
+  <div id="tip" hidden></div>
+  <div id="dropVeil" aria-hidden="true"><p>Suelta el documento: el cubo lo absorbe.</p></div>
+
+  <nav class="nav" aria-label="Dimensiones">
+    <button id="logoPortal" class="wordmark" type="button" aria-label="PULSO. Cruzar el portal a la siguiente dimensión">PULSO<span class="portal-dot" aria-hidden="true"></span></button>
+    <div class="dims" role="list">
+      <button type="button" data-go="base" aria-current="true"><span class="n">01</span><span class="t">Frecuencia base</span></button>
+      <button type="button" data-go="cal"><span class="n">02</span><span class="t">Calibración</span></button>
+      <button type="button" data-go="sala"><span class="n">03</span><span class="t">Sala de crisis</span></button>
+    </div>
+  </nav>
+
+  <div id="ui">
+    <!-- ================= 1 · FRECUENCIA BASE ================= -->
+    <section id="dim-base" class="dim on" aria-labelledby="t-base">
+      <div id="p-base" class="holo" data-depth="10">
+        <p class="label">01 · Frecuencia base</p>
+        <h1 id="t-base" style="margin-top:12px">Tu Electro.</h1>
+        <p class="lead">Cada filamento es una de tus sesiones. Su forma sale de cómo hablaste: muletillas, ritmo y mirada. Gíralo y acércate para explorarlo.</p>
+        <div class="stats">
+          <div class="stat"><p class="label">Sesiones</p><p class="v" id="stSessions">—</p></div>
+          <div class="stat"><p class="label">Muletillas/min</p><p class="v" id="stFpm">—</p></div>
+          <div class="stat"><p class="label">Ritmo</p><p class="v" id="stWpm">—</p></div>
+          <div class="stat"><p class="label">Contacto visual</p><p class="v" id="stGaze">—</p></div>
+        </div>
+        <p class="caption" id="stNote"></p>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:22px">
+          <button type="button" class="mag primary" data-go="cal">Preparar sesión</button>
+        </div>
+      </div>
+
+      <div id="p-doc" class="holo" data-depth="16">
+        <p class="label">Contexto para la IA</p>
+        <h2 style="margin-top:8px">El cubo.</h2>
+        <p class="t-small muted" style="margin-top:8px">Arrastra tu CV, tu presentación o tu TFM (PDF o texto) hasta el cubo de cristal. Lo absorbe y PULSO contrasta las cifras que digas en la entrevista.</p>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:14px">
+          <button type="button" class="mag" id="docPick">Elegir documento</button>
+          <input id="docFile" type="file" accept=".pdf,.txt,.md,text/plain,application/pdf" hidden>
+        </div>
+        <p id="docStatus" role="status">Sin documento.</p>
+        <details class="t-small" style="margin-top:10px"><summary class="muted" style="cursor:pointer">Ver o editar el texto</summary>
+          <textarea id="pe-cv" rows="5" maxlength="6000" style="width:100%;margin-top:8px;padding:10px;border-radius:10px;border:1px solid var(--glass-line);background:var(--glass)" placeholder="Texto de tu CV o dossier"></textarea>
+        </details>
+      </div>
+
+      <div id="p-report" class="holo" data-depth="8" hidden>
+        <div class="scroll">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><p class="label">Última sesión</p><button type="button" class="linkbtn t-small" id="closeReport">Cerrar informe</button></div>
+          <div id="pe-report" class="hidden">
+            <h2 class="rep-h" style="margin-top:10px">Valoración general.</h2>
+            <p id="pe-verdict"></p>
+            <p id="pe-early" class="hidden t-small muted" style="margin-top:6px"></p>
+            <div class="metric"><div class="row"><p>Muletillas por minuto</p><p class="num" id="pe-mFiller">—</p></div><div class="bar"><div id="pe-bFiller" class="bar-fill lvl-none"></div></div><p class="t-small muted" style="margin-top:4px">Objetivo: menos de 3 por minuto</p></div>
+            <div class="metric"><div class="row"><p>Ritmo (palabras/min)</p><p class="num" id="pe-mPace">—</p></div><div class="bar"><div class="zone" style="left:50%;width:11.5%"></div><div id="pe-bPace" class="bar-fill lvl-none relative"></div></div><p class="t-small muted" style="margin-top:4px">Zona recomendada: 130 a 160</p></div>
+            <div class="metric"><div class="row"><p>Contacto visual</p><p class="num" id="pe-mGaze">—</p></div><div class="bar"><div class="zone" style="left:80%;width:20%"></div><div id="pe-bGaze" class="bar-fill lvl-none relative"></div></div><p class="t-small muted" style="margin-top:4px">Objetivo: más del 80 % · <span id="pe-mGazeEv">—</span></p></div>
+            <div class="counts">
+              <div><p class="label">Palabras</p><p class="num" id="pe-mWords">—</p></div>
+              <div><p class="label">Pausas largas</p><p class="num" id="pe-mPauses">—</p></div>
+              <div><p class="label">Respuestas</p><p class="num" id="pe-mTurns">—</p></div>
+            </div>
+            <p id="pe-fillerList" class="t-small muted" style="margin-top:12px"></p>
+            <div id="pe-goodBox" class="hidden"><h4>Lo que has hecho bien</h4><ul id="pe-good"></ul></div>
+            <h4>Qué mejorar</h4><ul id="pe-tips"></ul>
+            <div id="pe-momentsBox" class="hidden"><h4>Momentos concretos</h4><ul id="pe-moments"></ul></div>
+            <details>
+              <summary>Métricas del Electro: qué se mide y qué no</summary>
+              <div id="pe-tableWrap" class="hidden">
+                <p class="t-small muted" style="margin-top:10px">Solo conducta observable. El artículo 5(1)(f) de la Ley de IA de la UE prohíbe inferir emociones en el trabajo y la educación, y PULSO no lo hace.</p>
+                <dl id="pe-segInfo"></dl>
+                <div style="overflow-x:auto"><table><thead><tr><th>Métrica</th><th>Qué mide</th><th>Cómo se calcula</th><th>Tu resultado</th></tr></thead><tbody id="pe-tbody"></tbody></table></div>
+              </div>
+            </details>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:24px">
+              <button type="button" class="mag primary" data-go="cal">Nueva sesión</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p id="hint-electro" class="holo" data-depth="4">Arrastra para girar tu Electro · Rueda para acercarte</p>
+    </section>
+
+    <!-- ================= 2 · CÁMARA DE CALIBRACIÓN ================= -->
+    <section id="dim-cal" class="dim" aria-labelledby="t-cal">
+      <div id="p-setup" class="holo" data-depth="14">
+        <p class="label">02 · Cámara de calibración</p>
+        <h1 id="t-cal" style="margin-top:12px">Configura la presión.</h1>
+        <div class="scroll">
+          <div class="group">
+            <p class="label">Tipo de entrevista</p>
+            <div class="chips" role="group" aria-label="Tipo de entrevista">
+              <button type="button" class="chip" data-seg="b2c" aria-pressed="true">Primer empleo o cambio</button>
+              <button type="button" class="chip" data-seg="b2b">Selección de empresa</button>
+              <button type="button" class="chip" data-seg="edu">Universidad o MBA</button>
+            </div>
+            <select id="pe-seg" aria-hidden="true" tabindex="-1"><option value="b2c">Usuario final (B2C)</option><option value="b2b">RRHH (B2B)</option><option value="edu">Universidades y MBA</option></select>
+          </div>
+          <div class="group">
+            <p class="label">Hostilidad y voz de Marta</p>
+            <div class="dials">
+              <div class="dial" id="dialHost" data-kind="host" role="slider" tabindex="0" aria-label="Nivel de hostilidad" aria-valuemin="1" aria-valuemax="10" aria-valuenow="5"><span class="dial-cap">Hostilidad</span><div class="dial-drum"></div><div class="dial-window"></div></div>
+              <div class="dial" id="dialVoice" data-kind="voice" role="slider" tabindex="0" aria-label="Voz de Marta" aria-valuemin="1" aria-valuemax="1" aria-valuenow="1"><span class="dial-cap">Voz</span><div class="dial-drum"></div><div class="dial-window"></div></div>
+            </div>
+            <p id="hostHint" aria-live="polite"></p>
+            <label class="slider" id="rateBox"><span class="row"><span>Velocidad de la voz</span><span id="rateOut">1,00×</span></span><input id="rate" type="range" min="0.8" max="1.3" step="0.05" value="1"></label>
+            <label id="pe-voiceBox" class="check"><input id="pe-voice" type="checkbox" checked> Voz de Marta (mejor con auriculares, para evitar ecos)</label>
+            <div style="margin-top:12px"><button type="button" class="linkbtn" id="testVoice">Probar la voz</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="p-cam" class="holo" data-depth="22">
+        <p class="label">Calibración de mirada</p>
+        <h2 style="margin-top:8px">Mira a la cámara.</h2>
+        <div class="cambox">
+          <video id="pe-video" autoplay playsinline muted></video>
+          <div id="pe-camOff"><p>Enciende la cámara y mira al objetivo dos segundos: PULSO aprende tu mirada.</p><button id="pe-camBtn" type="button" class="mag">Encender cámara</button></div>
+          <div id="pe-cal" class="hidden"><p id="pe-calText">Mira a la cámara</p></div>
+          <p id="pe-att" class="hidden" aria-live="polite"><span id="pe-attDot" class="w-2.5 h-2.5 rounded-full" style="background:var(--alabaster)"></span><span id="pe-attLabel">Cargando análisis de mirada…</span></p>
+        </div>
+        <p class="caption"><span id="pe-permStatus">Solo mide si miras a la cámara o apartas la vista. No se graba ni se envía: todo se calcula en tu navegador y no infiere emociones.</span> <button id="pe-recal" type="button" class="linkbtn hidden">Recalibrar mirada</button> <button id="pe-camStop" type="button" class="linkbtn hidden">Apagar cámara</button></p>
+        <p id="pe-fileWarn" class="hidden">Has abierto la app como archivo (<code>file://</code>): el navegador te pedirá permisos cada vez. Ábrela con «Abrir PULSO Breath.command» para que los recuerde.</p>
+        <button type="button" class="mag primary" id="enterRoom">Entrar en la sala de crisis</button>
+      </div>
+    </section>
+
+    <!-- ================= 3 · EL PUNTO CRÍTICO ================= -->
+    <section id="dim-sala" class="dim" aria-labelledby="t-sala">
+      <div id="hud-tl" class="hud-el">
+        <p class="label" id="t-sala">03 · Sala de crisis</p>
+        <p class="stage"><span id="pe-stageLabel">Sin empezar</span></p>
+        <div id="pe-live" class="hidden" aria-live="polite"><span id="pe-liveDot" class="w-2.5 h-2.5 rounded-full pulse-dot" style="background: var(--crimson);"></span><span id="pe-liveLabel">Te escucho</span></div>
+        <span id="pe-avatar" hidden></span>
+      </div>
+      <div id="hud-prog" class="hud-el">
+        <div id="pe-idle"><p class="label">Avance · <span id="pe-progText">Sin empezar</span></p><div class="bar"><div id="pe-prog" class="bar-fill lvl-good"></div></div></div>
+        <p id="pe-sideNote" hidden></p>
+      </div>
+      <div id="hud-tr" class="hud-el">
+        <p>TIEMPO <b id="pe-timer">0:00</b></p>
+        <p>HOSTILIDAD <b id="hudHost">5/10</b></p>
+        <p>MIRADA <b id="hudAtt">—</b></p>
+      </div>
+      <div id="hud-chat" class="holo hud-el" data-depth="6">
+        <div id="pe-chat" role="log" aria-live="polite">
+          <p id="pe-empty" class="muted">Marta abrirá la conversación. Responde con tu voz: cuando hagas una pausa de 1,5 segundos, ella continúa.</p>
+        </div>
+        <div id="hud-ctrl">
+          <span id="pe-startWrap"><button id="pe-start" class="mag primary" type="button"><span id="pe-start-label">Empezar entrevista</span></button></span>
+          <span id="pe-answerWrap" class="hidden"><button id="pe-answer" class="linkbtn t-small" type="button">Ya he terminado</button></span>
+          <button id="pe-end" class="linkbtn hidden" type="button">Terminar entrevista</button>
+        </div>
+      </div>
+      <div id="hud-metrics" class="hud-el" aria-label="Métricas en directo">
+        <div class="met" id="mFpm"><p class="label">Muletillas/min</p><p class="v">—</p></div>
+        <div class="met" id="mWpm"><p class="label">Ritmo ppm</p><p class="v">—</p></div>
+        <div class="met" id="mGaze"><p class="label">Contacto visual</p><p class="v">—</p></div>
+        <div class="met" id="mLat"><p class="label">Responder</p><p class="v">—</p></div>
+        <div class="met" id="mWords"><p class="label">Palabras</p><p class="v">0</p></div>
+      </div>
+      <p id="hud-note" class="hud-el"><span id="pe-note">Usa Chrome o Edge. Tu audio y tu vídeo no salen del navegador. No hace falta pulsar nada: haz una pausa de 1,5 segundos al terminar cada respuesta.</span></p>
+    </section>
+  </div>
+
+  <!-- ===== Motor de la entrevista (voz, cámara, mirada e informe) ===== -->
+  <script>
+/* PULSO Breath · Motor de la entrevista
+   Voz de Marta (síntesis de voz del navegador), reconocimiento de voz, detección de silencio (1,5 s),
+   preguntas y repreguntas contextuales, cámara y mirada (MediaPipe Face Landmarker), informe final.
+   Se comunica con el mundo 3D mediante eventos «pulso:*» (phase, bump, say, live, att, camera, interrupt, done, abort).
+   Opcional: GEMINI_API_KEY al principio del archivo para que Marta redacte las repreguntas con Gemini. */
+
+  (function () {
+    'use strict';
+    var root = document.getElementById('dim-sala');
+    if (!root) return;
+
+    /* =====================================================
+       CONFIGURACIÓN (puedes cambiar textos, tiempos y reglas)
+       ===================================================== */
+    /* Opcional: con una clave de Gemini, Marta redacta sus repreguntas en tiempo real.
+       Vacía, se usa el motor contextual local. AVISO: una clave escrita aquí la puede
+       ver cualquiera que abra la página. Úsala solo en tu ordenador; nunca la publiques. */
+    var GEMINI_API_KEY = '';
+    var GEMINI_MODEL = 'gemini-2.5-flash';
+    var GEMINI_TIMEOUT_MS = 6000;
+
+    var BOT = 'Marta';
+    var SILENCE_MS = 1500;          // silencio que da por terminada una respuesta
+    var SILENCE_SHORT_MS = 2300;    // si solo llevas 2 o 3 palabras («Pues…»), se espera un poco más
+    var ONE_WORD_MS = 4000;         // si solo has dicho una palabra («Ana», «no»), se espera algo más
+    var NO_SPEECH_MS = 20000;       // sin hablar en absoluto
+    var MAX_TURN_S = 120;           // máximo por respuesta
+    var MAX_FOLLOWUPS = 5;          // preguntas de seguimiento (se ajusta con la hostilidad)
+    function CFG() { return window.PULSO_CFG || {}; }
+    function hostility() { return clamp(Math.round(CFG().hostility || 5), 1, 10); }
+    function emit(name, detail) { try { document.dispatchEvent(new CustomEvent('pulso:' + name, { detail: detail })); } catch (e) { /* sin eventos */ } }
+
+    var GAZE_EVENT_MS = 1000;       // un desvío de más de 1 s cuenta como desvío de mirada
+    var GAZE_LONG_MS = 3500;        // un desvío de más de 3,5 s seguidos: Marta lo comenta
+    var CAM_SAMPLE_MS = 200;        // 5 análisis por segundo
+
+    var F1 = ['eh', 'em', 'mmm', 'este', 'bueno', 'pues', 'vale', 'nada', 'digamos', 'básicamente'];
+    var F2 = ['o sea', 'en plan', 'es que', 'como que', 'a ver', 'la verdad', 'pues eso'];
+    var HEDGES = ['creo que', 'supongo', 'quizás', 'quizá', 'a lo mejor', 'tal vez', 'más o menos', 'un poco', 'no sé', 'puede que'];
+
+    function hasExample(x) { return /\d/.test(x) || /por ejemplo|proyecto|prácticas|cuando\s|una vez|logré|conseguí|aprendí|entregué/.test(x); }
+
+    /* ---------- Guion de la entrevista ---------- */
+    var STAGES = [
+      { id: 'name', label: 'Inicio', noEval: true,
+        q: 'Hola, gracias por venir. Soy ' + BOT + ', de selección de personal. Antes de empezar, ¿cómo te llamas?' },
+      { id: 'intro', label: 'Presentación',
+        q: 'Encantada{n}. Para empezar, cuéntame un poco sobre ti: quién eres y a qué te dedicas.' },
+      { id: 'motivation', label: 'Motivación',
+        q: '¿Por qué te interesa este puesto?',
+        follow: [{ when: function (t, r, x) { return !/empresa|vuestr|vosotros|compañía|sector|marca/.test(x); },
+                   lead: 'Me gustaría algo más concreto.', q: '¿Qué sabes de nuestra empresa y qué es lo que más te atrae de ella?' }] },
+      { id: 'strengths', label: 'Puntos fuertes', example: true,
+        q: 'Y dime, ¿cuáles dirías que son tus puntos fuertes?',
+        follow: [{ when: function (t, r, x) { return !hasExample(x); },
+                   lead: 'Suena bien.', q: '¿Me puedes poner un ejemplo concreto en el que hayas demostrado esa cualidad?' }] },
+      { id: 'challenge', label: 'Situación difícil', example: true,
+        q: 'Cuéntame una situación difícil que hayas vivido, en los estudios o en el trabajo, y cómo la resolviste.',
+        follow: [{ when: function (t, r, x) { return !/resultado|conseguí|conseguimos|logr|al final|solucion|resolv|terminó|acabó|aprend/.test(x); },
+                   lead: 'Entiendo.', q: '¿Y cómo terminó la situación? ¿Qué resultado tuvo y qué aprendiste?' }] },
+      { id: 'weakness', label: 'Debilidad',
+        q: 'Y al contrario, ¿cuál dirías que es tu mayor debilidad?',
+        follow: [{ when: function (t, r, x) { return /ninguna|perfeccionis|trabajo demasiado|exigente conmigo/.test(x); },
+                   lead: 'Todos tenemos alguna.', q: '¿Podrías contarme una debilidad real y qué estás haciendo para mejorarla?' }] },
+      { id: 'future', label: 'Futuro',
+        q: '¿Dónde te ves dentro de cinco años?' },
+      { id: 'closing', label: 'Cierre', closing: true, lenient: true,
+        q: 'Para terminar, ¿tienes alguna pregunta para nosotros?' }
+    ];
+
+    /* ---------- Ganchos: temas que Marta recoge citando tus palabras ----------
+       {t} se sustituye por la palabra exacta que has dicho. */
+    var L = 'a-záéíóúüñ';
+    function rx(body) { return new RegExp('(?:^|[^0-9' + L + '])(' + body + ')(?![0-9' + L + '])', 'i'); }
+    var W = '[' + L + ']*';
+    var HOOKS = [
+      { id: 'metric', re: rx('\\d+(?:[.,]\\d+)?\\s*(?:%|por ciento)'), lead: ['Has dado una cifra, {t}.', 'Me quedo con ese {t}.'], q: ['¿Cómo lo medisteis y qué parte de ese resultado es mérito tuyo?', '¿Con qué dato partíais y qué hiciste tú para llegar ahí?'] },
+      { id: 'achievement', re: rx('logr' + W + '|consegu' + W + '|premio' + W + '|ganamos|gané|récord|superé'), lead: ['Dices «{t}».', 'Eso de «{t}» suena a resultado.'], q: ['¿Qué hiciste tú, en concreto, para que saliera así?', '¿Qué fue lo más difícil de conseguirlo?'] },
+      { id: 'failure', re: rx('fall[éo]' + W + '|fracas' + W + '|error' + W + '|me equivoqué|salió mal|no salió'), lead: ['Hablas de «{t}».', 'Has mencionado «{t}», y me interesa.'], q: ['¿Qué cambiarías hoy si te volviera a pasar?', '¿Cómo lo detectaste y qué hiciste después?'] },
+      { id: 'team', re: rx('equipo' + W + '|grupo de trabajo|compañeros|colabor' + W), lead: ['Hablas de «{t}».', 'Mencionas «{t}».'], q: ['¿Cuál era exactamente tu papel ahí y cómo resolvíais los desacuerdos?', '¿Cuántos erais y qué te tocaba a ti?'] },
+      { id: 'lead', re: rx('lider' + W + '|coordin' + W + '|dirig' + W + '|responsable de|a cargo de'), lead: ['Dices «{t}».', 'Has hablado de «{t}».'], q: ['¿Cómo conseguiste que el resto te siguiera cuando las cosas se complicaron?', '¿A cuántas personas y con qué resultado?'] },
+      { id: 'exp', re: rx('prácticas|becari' + W + '|experiencia|trabajé|he trabajado'), lead: ['Mencionas «{t}».', 'Sobre «{t}»…'], q: ['¿Qué logro concreto de esa etapa contarías primero?', '¿Qué aprendiste ahí que no te enseñaron en clase?'] },
+      { id: 'study', re: rx('grado|carrera|máster|master|universidad|facultad|ciclo formativo|fp'), lead: ['Has hablado de tu {t}.', 'Sobre tu {t}…'], q: ['¿Qué asignatura o proyecto de ahí te sirve más para este puesto?', '¿Por qué elegiste esa formación?'] },
+      { id: 'thesis', re: rx('tfg|tfm|tesis|trabajo de fin de ' + W), lead: ['Mencionas tu {t}.', 'Lo de tu {t} me interesa.'], q: ['¿Cuál fue la conclusión principal, en una frase?', '¿Qué decisión de método tomaste y por qué?'] },
+      { id: 'project', re: rx('proyecto' + W), lead: ['Has hablado de un {t}.', 'Sobre ese {t}…'], q: ['¿Cuál era el objetivo y qué parte llevabas tú?', '¿Qué salió distinto de lo que habíais planeado?'] },
+      { id: 'money', re: rx('presupuesto' + W + '|coste' + W + '|ahorr' + W + '|euros|facturación|beneficio' + W), lead: ['Hablas de {t}.', 'Mencionas «{t}».'], q: ['¿De qué cantidad hablamos y cómo la controlabas?', '¿Qué decisión tomaste tú que afectó a esa cifra?'] },
+      { id: 'client', re: rx('cliente' + W + '|usuario' + W + '|consumidor' + W), lead: ['Mencionas a los {t}.', 'Hablas de «{t}».'], q: ['¿Qué te pidió ese cliente y cómo respondiste?', '¿Cómo sabías si estaban satisfechos?'] },
+      { id: 'service', re: rx('atención al cliente|queja' + W + '|reclamaci' + W), lead: ['Hablas de «{t}».', 'Lo de «{t}»…'], q: ['¿Cuál fue la queja más difícil que gestionaste y cómo acabó?', '¿Qué haces cuando el cliente no tiene razón?'] },
+      { id: 'sales', re: rx('ventas|vend' + W + '|comercial' + W + '|captación'), lead: ['Hablas de {t}.', 'Mencionas «{t}».'], q: ['¿Con qué objetivo trabajabas y lo cumpliste?', '¿Cómo preparas una venta difícil?'] },
+      { id: 'conflict', re: rx('conflicto' + W + '|discusi' + W + '|desacuerdo' + W + '|choque' + W + '|tensión'), lead: ['Hablas de «{t}».', 'Mencionas un {t}.'], q: ['¿Qué dijiste tú exactamente para desbloquearlo?', '¿Cómo quedó la relación con esa persona después?'] },
+      { id: 'deadline', re: rx('plazo' + W + '|fecha de entrega|entrega' + W + '|a tiempo|contrarreloj|deadline'), lead: ['Mencionas «{t}».', 'Hablas de «{t}».'], q: ['¿Qué dejaste fuera para llegar y quién lo decidió?', '¿Cómo te organizaste para cumplirlo?'] },
+      { id: 'pressure', re: rx('presión|estrés|agobi' + W + '|urgen' + W), lead: ['Hablas de «{t}».', 'Dices «{t}».'], q: ['¿Qué haces en concreto para seguir rindiendo en esas situaciones?', '¿Cuál fue el momento de más presión y qué hiciste?'] },
+      { id: 'tool', re: rx('excel|python|sql|java|javascript|power bi|tableau|figma|sap|salesforce|photoshop|canva|autocad|hubspot|wordpress|notion|jira'), lead: ['Mencionas {t}.', 'Has hablado de {t}.'], q: ['¿Para qué lo usaste exactamente y qué resultado obtuviste?', '¿Qué nivel tienes y cómo lo demostrarías aquí?'] },
+      { id: 'data', re: rx('datos|análisis|analicé|estadística' + W + '|informe' + W + '|métrica' + W), lead: ['Hablas de {t}.', 'Mencionas «{t}».'], q: ['¿Qué conclusión sacaste de esos datos y qué cambió gracias a ella?', '¿Qué dato te sorprendió más?'] },
+      { id: 'research', re: rx('investigaci' + W + '|encuesta' + W + '|laboratorio|experimento' + W), lead: ['Mencionas «{t}».', 'Hablas de «{t}».'], q: ['¿Cuál fue la pregunta que querías responder y qué encontraste?', '¿Qué harías distinto en el diseño?'] },
+      { id: 'lang', re: rx('inglés|francés|alemán|italiano|chino|idioma' + W + '|bilingüe'), lead: ['Mencionas el {t}.', 'Hablas de {t}.'], q: ['¿Lo has usado en una situación real de trabajo? Cuéntame cómo fue.', '¿Qué nivel tienes y cómo lo acreditas?'] },
+      { id: 'abroad', re: rx('erasmus|extranjero|intercambio|viví en|me fui a'), lead: ['Hablas de «{t}».', 'Lo de «{t}»…'], q: ['¿Qué fue lo que más te costó adaptarte allí?', '¿Qué te trajiste de esa experiencia para trabajar?'] },
+      { id: 'volunteer', re: rx('voluntari' + W + '|ong|asociación'), lead: ['Mencionas «{t}».', 'Hablas de {t}.'], q: ['¿Qué responsabilidad tenías y qué conseguisteis?', '¿Por qué decidiste dedicarle tiempo?'] },
+      { id: 'sport', re: rx('deporte' + W + '|fútbol|baloncesto|competici' + W + '|entrenador' + W + '|federad' + W), lead: ['Hablas de {t}.', 'Mencionas «{t}».'], q: ['¿Qué te ha enseñado eso que apliques al trabajo?', '¿Cómo gestionas perder?'] },
+      { id: 'entrepreneur', re: rx('emprend' + W + '|startup|mi propio negocio|fundé|cofundador' + W), lead: ['Dices «{t}».', 'Lo de «{t}» me interesa.'], q: ['¿Qué funcionó, qué no y qué cifras tenías?', '¿Por qué ahora quieres trabajar en una empresa?'] },
+      { id: 'communication', re: rx('presentaci' + W + '|hablar en público|expuse|exponer|comunicaci' + W), lead: ['Hablas de «{t}».', 'Mencionas «{t}».'], q: ['¿Ante quién fue y qué querías conseguir?', '¿Qué pregunta difícil te hicieron y qué respondiste?'] },
+      { id: 'planning', re: rx('organiz' + W + '|planific' + W + '|prioridad' + W + '|agenda'), lead: ['Dices «{t}».', 'Hablas de «{t}».'], q: ['¿Cómo decides qué va primero cuando todo es urgente?', '¿Qué herramienta o método usas?'] },
+      { id: 'change', re: rx('cambio' + W + '|adapt' + W + '|me mudé'), lead: ['Mencionas «{t}».', 'Hablas de «{t}».'], q: ['¿Qué fue lo más difícil de ese cambio y cómo lo resolviste?', '¿Qué hiciste la primera semana?'] },
+      { id: 'learning', re: rx('aprendí|curso' + W + '|certificaci' + W + '|autodidacta'), lead: ['Dices «{t}».', 'Mencionas «{t}».'], q: ['¿Dónde lo has aplicado ya?', '¿Qué es lo próximo que quieres aprender?'] },
+      { id: 'creativity', re: rx('creativ' + W + '|idea' + W + '|innov' + W + '|diseñ' + W), lead: ['Hablas de «{t}».', 'Lo de «{t}»…'], q: ['¿Qué idea concreta propusiste y llegó a aplicarse?', '¿Cómo convenciste a los demás?'] }
+    ];
+    var HOOK_STAGES = ['intro', 'motivation', 'strengths', 'challenge', 'weakness', 'future'];
+
+    var VERB_RE = new RegExp('(?:^|[^' + L + '])(lideré|dirigí|coordiné|organicé|diseñé|creé|desarrollé|implanté|implementé|lancé|gestioné|negocié|vendí|conseguí|logré|reduje|aumenté|mejoré|automaticé|resolví|propuse|presenté|monté|programé|analicé|formé|ayudé|hice|entregué|superé|gané|decidí|cambié|convencí)(?![' + L + '])', 'gi');
+    var STOP = ('a al algo algún alguna alguno ante antes así aunque bastante bien cada casi como con cosa cosas creo cual cuando de del desde donde dos e el ella ellos en entonces era eran es esa ese eso esta estaba este esto estoy fue fui ha había hace hacer he hemos hice la las le les lo los más me mi mis mucho muy nada ni no nos o otra otro para pero poco por porque que qué se sea ser si sí sin sobre soy su sus también tan tanto te tenía tengo todo todos tu un una uno unos y ya yo eh em mmm pues bueno vale').split(' ');
+    var FIELDS = [
+      [/\bade\b|administración de empresas|empresariales/, 'la administración de empresas'],
+      [/marketing|publicidad/, 'el marketing'],
+      [/ingenier/, 'la ingeniería'],
+      [/informátic|programaci|software/, 'la informática'],
+      [/derecho|jurídic/, 'el derecho'],
+      [/diseñ/, 'el diseño'],
+      [/psicolog/, 'la psicología'],
+      [/educación|magisterio|docen|profesor/, 'la educación'],
+      [/enfermer|sanidad|medicin/, 'la salud'],
+      [/econom|finanzas|contabilidad/, 'la economía y las finanzas'],
+      [/comunicaci|periodis/, 'la comunicación']
+    ];
+    /* Reacciones y conectores (se van rotando para no repetirse) */
+    var ACKS = ['Vale, entiendo.', 'De acuerdo.', 'Muy bien.', 'Gracias, me ha quedado claro.', 'Perfecto, tomo nota.', 'Interesante.', 'Entendido.', 'Me sirve, gracias.', 'Bien visto.', 'Lo apunto.', 'Te sigo.', 'Claro.', 'Eso es útil saberlo.', 'Muy interesante, gracias.', 'Bien.', 'Gracias por concretar.'];
+    var BRIDGES = ['Cambiemos de tema.', 'Pasemos a otra cosa.', 'Vamos con la siguiente.', 'Sigamos.', 'Te pregunto otra cosa.', 'Ahora, otra pregunta.', 'Avancemos.', 'Siguiente punto.'];
+    var R_NUM = ['Me quedo con esa cifra: {t}.', 'Bien, una cifra concreta: {t}.', '{t}: eso se recuerda.'];
+    var R_VERB = ['Dices que {t}; eso es lo que quería oír.', 'Que {t} cuenta mucho.', 'Bien, {t} tú.'];
+    var R_NAME = ['Lo de {t} me interesa.', 'Apunto lo de {t}.'];
+    var PULL = ['Te has quedado en «{t}». ¿Qué hiciste exactamente ahí?', 'Espera, sigue con lo de «{t}». ¿Qué pasó después?', 'Has empezado a hablar de «{t}». Cuéntame un poco más, con algún detalle.', 'Vuelve a «{t}», por favor. ¿Cuál fue tu papel?'];
+    var PULL_GENERIC = ['Cuéntame un poco más, por favor. Me gustaría que te explayaras con algún detalle o ejemplo.', 'Dame algo más de detalle: ¿qué hiciste tú, en concreto?'];
+    var CAM_REMARKS = ['Por cierto, has apartado la vista de la cámara un buen rato. Mírame cuando respondas y centrémonos en esto.', 'Un apunte: llevas un rato mirando fuera de la cámara. Vuelve a mirarme y sigamos.'];
+
+    /* =====================================================
+       UTILIDADES
+       ===================================================== */
+    function $(id) { return document.getElementById(id); }
+    function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+    function num(n, d) { return Number(n).toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    function clock(sec) { var s = Math.floor(sec); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+    function norm(w) { return w.toLowerCase().replace(/[.,;:¿?¡!"«»()]/g, ''); }
+    function join() { return Array.prototype.slice.call(arguments).filter(Boolean).join(' '); }
+    function avg(a) { return a.length ? a.reduce(function (x, y) { return x + y; }, 0) / a.length : null; }
+    function countWords(s) { return String(s || '').trim().split(/\s+/).filter(Boolean).length; }
+    function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+    var rot = {};
+    function pick(key, list) { rot[key] = (rot[key] || 0) + 1; return list[(rot[key] - 1) % list.length]; }
+    function fill(tpl, t) { return tpl.replace(/\{t\}/g, t); }
+
+    function tokenize(text) {
+      var raw = text.split(/\s+/).filter(Boolean), out = [];
+      for (var i = 0; i < raw.length; i++) {
+        var n = norm(raw[i]), nx = raw[i + 1] ? norm(raw[i + 1]) : '';
+        if (nx && F2.indexOf(n + ' ' + nx) !== -1) {
+          out.push({ text: raw[i] + ' ' + raw[i + 1], key: n + ' ' + nx, filler: true, words: 2 });
+          i++; continue;
+        }
+        out.push({ text: raw[i], key: n, filler: F1.indexOf(n) !== -1, words: 1 });
+      }
+      return out;
+    }
+
+    function paintInto(node, text) {
+      node.innerHTML = tokenize(text).map(function (t) {
+        return t.filler ? ' <span class="filler">' + esc(t.text) + '</span>' : ' ' + esc(t.text);
+      }).join('');
+    }
+
+    /* ---------- Lectura del contenido de cada respuesta ----------
+       Extrae cifras, verbos de acción, nombres propios, temas (ganchos)
+       y la última idea mencionada, para que Marta pueda citarlos. */
+    function analyze(text) {
+      var o = { nums: [], verbs: [], names: [], hooks: [], last: '', trait: '' };
+      var m, re = /(\d+(?:[.,]\d+)?)\s*(%|por ciento|euros?|€|mil|millones|clientes|personas|usuarios|alumnos|meses|años|semanas|días|horas|ventas|proyectos|empleados)?/gi;
+      while ((m = re.exec(text))) o.nums.push({ t: m[0].trim(), i: m.index });
+      VERB_RE.lastIndex = 0;
+      while ((m = VERB_RE.exec(text))) o.verbs.push({ t: m[1].toLowerCase(), i: m.index });
+      var words = text.split(/\s+/), pos = 0;
+      words.forEach(function (w, k) {
+        var clean = w.replace(/[.,;:¿?¡!"«»()]/g, '');
+        var prev = k > 0 ? words[k - 1] : '';
+        if (k > 0 && !/[.?!]$/.test(prev) && /^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,}$/.test(clean) && STOP.indexOf(clean.toLowerCase()) === -1 && clean !== S.name) o.names.push({ t: clean, i: text.indexOf(w, pos) });
+        pos += w.length + 1;
+      });
+      HOOKS.forEach(function (h) {
+        var mm = h.re.exec(text);
+        if (mm) o.hooks.push({ hook: h, t: mm[1].trim(), i: mm.index + mm[0].length - mm[1].length });
+      });
+      o.hooks.sort(function (a, b) { return a.i - b.i; });
+      var tr = text.toLowerCase().match(new RegExp('(?:soy|me considero|mi punto fuerte es|destacaría (?:mi|la|el))\\s+([' + L + ']{4,}(?:\\s+y\\s+[' + L + ']{4,})?)'));
+      if (tr) o.trait = tr[1];
+      var cands = [].concat(o.hooks, o.names, o.nums).sort(function (a, b) { return b.i - a.i; });
+      if (cands.length) o.last = cands[0].t;
+      else {
+        var sent = text.split(/[.?!]/).filter(function (s) { return s.trim(); }).pop() || '';
+        var content = sent.split(/\s+/).map(norm).filter(function (w) { return w.length > 3 && STOP.indexOf(w) === -1 && F1.indexOf(w) === -1; });
+        o.last = content.slice(-2).join(' ');
+      }
+      return o;
+    }
+
+    /* =====================================================
+       ESTADO Y ELEMENTOS
+       ===================================================== */
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    var S = {
+      run: 0, phase: 'idle', stageIdx: 0, stage: null, isFollow: false, name: '', turns: [], log: [],
+      recog: null, recogAlive: false, ignoreMic: true, resLen: 0, silenceTimer: null,
+      media: null, turn: null, tickId: null, startTs: 0,
+      followUsed: {}, followTotal: 0, hooksUsed: {}, pulled: {}, needDetail: 0, calmUsed: 0, noSpeech: 0, camRemarks: 0
+    };
+
+    var el = {
+      chat: $('pe-chat'), empty: $('pe-empty'), stageLabel: $('pe-stageLabel'),
+      live: $('pe-live'), liveDot: $('pe-liveDot'), liveLabel: $('pe-liveLabel'),
+      startWrap: $('pe-startWrap'), start: $('pe-start'), startLabel: $('pe-start-label'),
+      answerWrap: $('pe-answerWrap'), answer: $('pe-answer'), end: $('pe-end'),
+      voice: $('pe-voice'), voiceBox: $('pe-voiceBox'), note: $('pe-note'), timer: $('pe-timer'),
+      idle: $('pe-idle'), prog: $('pe-prog'), progText: $('pe-progText'), report: $('pe-report'),
+      video: $('pe-video'), camOff: $('pe-camOff'), att: $('pe-att'), attDot: $('pe-attDot'), attLabel: $('pe-attLabel'), permSt: $('pe-permStatus')
+    };
+    var NOTE_DEFAULT = el.note.textContent;
+    var PERM_DEFAULT = el.permSt.textContent;
+    var avatar = $('pe-avatar');
+    /* El punto de Marta se mueve un poco con cada palabra que dice */
+    var DOT = { level: 0, raf: 0 };
+    var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function dotBump() { emit('bump'); DOT.level = Math.min(1, DOT.level + 0.55); if (!DOT.raf) DOT.raf = requestAnimationFrame(dotFrame); }
+    function dotFrame(ts) {
+      var talking = S.phase === 'asking';
+      DOT.level *= 0.9;
+      var sway = talking ? Math.sin(ts / 170) : 0;
+      var k = REDUCED ? 0.35 : 1;
+      var scale = 1 + k * (0.12 * DOT.level + 0.03 * sway);
+      var y = REDUCED ? 0 : -5 * DOT.level + 1.5 * sway;
+      avatar.style.transform = 'translateY(' + y.toFixed(2) + 'px) scale(' + scale.toFixed(3) + ')';
+      if (talking || DOT.level > 0.01) DOT.raf = requestAnimationFrame(dotFrame);
+      else { DOT.raf = 0; DOT.level = 0; avatar.style.transform = ''; }
+    }
+    function note(t) { el.note.textContent = t; }
+
+    var hasTTS = ('speechSynthesis' in window) && typeof window.SpeechSynthesisUtterance === 'function';
+    if (!hasTTS) { el.voiceBox.classList.add('hidden'); }
+    function voiceOn() { return hasTTS && !!el.voice.checked; }
+
+    var PROTO = ''; try { PROTO = window.location.protocol; } catch (e) { /* sin acceso */ }
+    function permissionMsg() {
+      if (PROTO === 'file:') return 'El navegador suele bloquear el micrófono en archivos abiertos desde el ordenador (file://). Abre la página desde localhost o desde una web con HTTPS.';
+      return 'No se ha concedido acceso al micrófono. Revisa el permiso del sitio en el navegador y el del sistema, y vuelve a intentarlo.';
+    }
+
+    /* El micrófono de la demo de arriba no puede usarse a la vez que este */
+    var demoBtn = $('btnMic'), demoWasDisabled = null;
+    function demoMicBusy() { var l = $('btnMicLabel'); return !!(l && l.textContent === 'Detener'); }
+    function lockDemoMic(on) {
+      if (!demoBtn) return;
+      if (on) { if (demoWasDisabled === null) { demoWasDisabled = demoBtn.disabled; } demoBtn.disabled = true; }
+      else if (demoWasDisabled !== null) { demoBtn.disabled = demoWasDisabled; demoWasDisabled = null; }
+    }
+
+    /* =====================================================
+       INTERFAZ
+       ===================================================== */
+    function bubble(who) {
+      var d = document.createElement('div');
+      d.className = 'fade-in mt-5';
+      if (who === 'me') { d.style.borderLeft = '3px solid var(--accent)'; d.style.paddingLeft = '14px'; }
+      var l = document.createElement('p');
+      l.className = 't-small font-semibold muted';
+      l.textContent = who === 'bot' ? BOT + ' · entrevistadora' : 'Tú';
+      var p = document.createElement('p');
+      p.className = who === 'bot' ? 'serif italic text-[22px] sm:text-[24px] leading-snug mt-1' : 'serif text-[21px] sm:text-[23px] leading-[1.65] mt-1';
+      d.appendChild(l); d.appendChild(p);
+      el.chat.appendChild(d);
+      el.chat.scrollTop = el.chat.scrollHeight;
+      return p;
+    }
+
+    function setLive() {
+      var show = S.phase === 'asking' || S.phase === 'listening' || S.phase === 'thinking';
+      el.live.classList.toggle('hidden', !show); el.live.classList.toggle('flex', show);
+      var label = { asking: BOT + ' está hablando', listening: 'Te escucho', thinking: BOT + ' te ha escuchado…' }[S.phase] || '';
+      el.liveLabel.textContent = label;
+      el.liveDot.style.background = S.phase === 'listening' ? 'var(--accent)' : 'var(--ink)';
+      el.liveDot.classList.toggle('pulse-dot', S.phase === 'listening');
+      el.answerWrap.classList.toggle('hidden', S.phase !== 'listening');
+      avatar.classList.toggle('talking', S.phase === 'asking');
+      if (S.phase === 'asking') dotBump();
+      emit('phase', S.phase);
+    }
+
+    function setButtons(running) {
+      el.startWrap.classList.toggle('hidden', running);
+      el.end.classList.toggle('hidden', !running);
+      if (!running) el.answerWrap.classList.add('hidden');
+    }
+
+    function setProgress() {
+      var total = STAGES.length;
+      el.prog.style.width = clamp((S.stageIdx / (total - 1)) * 100, 4, 100) + '%';
+      el.progText.textContent = 'pregunta ' + (S.stageIdx + 1) + ' de ' + total;
+    }
+
+    /* =====================================================
+       VOZ DE LA ENTREVISTADORA
+       ===================================================== */
+    function later(fn, ms) {
+      var run = S.run;
+      setTimeout(function () { if (S.run === run) fn(); }, ms);
+    }
+
+    function typeInto(p, text, run) {
+      var i = 0, tm;
+      function step() { if (S.run !== run) return; var prev = text.charAt(i - 1); i = Math.min(text.length, i + 1); if (i === 1 || /[\s,.;:¿?¡!]/.test(prev)) dotBump(); p.textContent = text.slice(0, i); el.chat.scrollTop = el.chat.scrollHeight; if (i < text.length) tm = setTimeout(step, 62); }
+      step();
+      return { sync: function (c) { if (c > i) i = Math.min(text.length, c); }, finish: function () { clearTimeout(tm); i = text.length; p.textContent = text; } };
+    }
+    function speak(text, cb, run, tw) {
+      var done = false, fb;
+      function once() { if (done) return; done = true; clearTimeout(fb); if (tw) tw.finish(); if (S.run === run) cb(); }
+      if (!voiceOn()) { fb = setTimeout(once, tw ? text.length * 62 + 400 : 700); return; }
+      try {
+        window.speechSynthesis.cancel();
+        var u = new window.SpeechSynthesisUtterance(text);
+        u.lang = 'es-ES';
+        var vs = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+        var pref = CFG().voiceURI, pv = pref ? vs.filter(function (v) { return v.voiceURI === pref; })[0] : null;
+        if (pv) u.voice = pv; else { for (var i = 0; i < vs.length; i++) { if (/^es(-|_|$)/i.test(vs[i].lang)) { u.voice = vs[i]; break; } } }
+        u.rate = CFG().rate || 1;
+        u.onend = once; u.onerror = once; u.onboundary = function (e) { dotBump(); if (tw) tw.sync(e.charIndex + (e.charLength || 5)); };
+        fb = setTimeout(once, Math.max(4000, text.length * 90 + 2500));
+        window.speechSynthesis.speak(u);
+      } catch (e) { fb = setTimeout(once, 700); }
+    }
+
+    /* =====================================================
+       RECONOCIMIENTO DE VOZ: una sola instancia para toda la entrevista
+       ===================================================== */
+    function createRecognizer() {
+      var run = S.run;
+      var r = new SR();
+      r.lang = 'es-ES'; r.continuous = true; r.interimResults = true;
+      S.recog = r; S.resLen = 0; S.lastResults = null;
+
+      r.onresult = function (ev) {
+        if (S.run !== run) return;
+        S.resLen = ev.results.length; S.lastResults = ev.results;
+        var t = S.turn;
+        if (S.ignoreMic || !t || !t.open) return;   // Marta habla o piensa: se descarta lo que llegue
+        var fin = '', interim = '';
+        /* Si al empezar tu turno Chrome tenía una frase a medias (un eco o el final de tu respuesta anterior)
+           y sigue escribiendo en ella, lo nuevo que añade es tuyo: se recoge en vez de perderlo. */
+        if (t.snapIdx != null && t.snapIdx < ev.results.length) {
+          var cur = ev.results[t.snapIdx][0].transcript, sn = t.snapText || '', p = 0;
+          while (p < cur.length && p < sn.length && cur.charAt(p) === sn.charAt(p)) p++;
+          var extra = cur.length > sn.length + 1 ? cur.slice(p).trim() : '';
+          if (extra) { if (ev.results[t.snapIdx].isFinal) fin += ' ' + extra; else interim += ' ' + extra; }
+        }
+        for (var k = t.base; k < ev.results.length; k++) {
+          if (ev.results[k].isFinal) fin += ' ' + ev.results[k][0].transcript;
+          else interim += ' ' + ev.results[k][0].transcript;
+        }
+        var finalText = (t.carry + ' ' + fin).trim();
+        if (!(finalText + interim).trim()) return;
+        var now = Date.now();
+        if (!t.firstTs) t.firstTs = now; else if (now - t.lastTs > 2000) t.pauses++;
+        t.lastTs = now;
+        t.finalText = finalText; t.interim = interim.trim();
+        if (!t.node) t.node = bubble('me');
+        paintInto(t.node, join(t.finalText, t.interim));
+        el.chat.scrollTop = el.chat.scrollHeight;
+        /* Detección de silencio: cada palabra nueva reinicia la cuenta de 1,5 s */
+        clearTimeout(S.silenceTimer);
+        var words = countWords(join(t.finalText, t.interim));
+        if (words >= 2) S.silenceTimer = setTimeout(function () { if (S.run === run && S.turn === t && t.open) endTurn(); }, words < 4 ? SILENCE_SHORT_MS : SILENCE_MS);
+      };
+
+      r.onerror = function (ev) {
+        if (S.run !== run) return;
+        if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { S.recogAlive = false; abort(permissionMsg()); }
+        else if (ev.error === 'network') { S.recogAlive = false; abort('El reconocimiento de voz necesita conexión a internet. Revisa tu conexión e inténtalo de nuevo.'); }
+        /* 'no-speech' y 'aborted' no son fatales: onend reconecta */
+      };
+
+      /* El navegador cierra la sesión de reconocimiento cada cierto tiempo:
+         se reabre sin tocar el micrófono ni la cámara. */
+      r.onend = function () {
+        if (S.run !== run || !S.recogAlive) return;
+        var t = S.turn;
+        if (t && t.open) { t.carry = join(t.finalText, t.interim); t.finalText = t.carry; t.interim = ''; t.base = 0; t.snapIdx = null; }
+        S.resLen = 0;
+        setTimeout(function () {
+          if (S.run !== run || !S.recogAlive) return;
+          try { r.start(); } catch (e) { /* ya estaba arrancado */ }
+        }, 120);
+      };
+
+      S.recogAlive = true;
+      r.start();
+    }
+
+    /* =====================================================
+       DIÁLOGO: la entrevistadora habla y luego escucha
+       ===================================================== */
+    function nameSuffix() { return S.name ? ', ' + S.name : ''; }
+    function fillQ(q) { return q.replace('{n}', nameSuffix()); }
+
+    function botSay(text, stage, isFollow) {
+      var run = S.run;
+      S.stage = stage; S.isFollow = isFollow; S.phase = 'asking'; S.ignoreMic = true;
+      el.stageLabel.textContent = stage.label + (isFollow ? ' · seguimiento' : '');
+      setProgress(); setLive();
+      S.log.push({ who: 'bot', text: text });
+      emit('say', text);
+      var tw = typeInto(bubble('bot'), text, run); S.tw = tw;
+      speak(text, function () { listen(); }, run, tw);
+    }
+
+    function listen() {
+      var lr = S.lastResults, openIdx = lr && S.resLen > 0 && lr[S.resLen - 1] && !lr[S.resLen - 1].isFinal ? S.resLen - 1 : null;
+      var t = { stage: S.stage, isFollow: S.isFollow, finalText: '', interim: '', carry: '', base: S.resLen, snapIdx: openIdx, snapText: openIdx != null ? lr[openIdx][0].transcript : '', startTs: Date.now(), firstTs: 0, lastTs: 0, pauses: 0, open: true, node: null,
+                camN: 0, camLook: 0, camOut: 0, camEvents: 0, camDirs: {}, longAway: false };
+      t.afterInt = !!S.afterInt; S.afterInt = false; S.turn = t;
+      S.phase = 'listening'; setLive();
+      /* El permiso se pide aquí, cuando te toca responder por primera vez, y no al cargar ni al empezar */
+      if (S.recog) { S.ignoreMic = false; return; }
+      requestMedia(function () {
+        t.startTs = Date.now();
+        try { createRecognizer(); } catch (e) { abort('No se ha podido iniciar el reconocimiento de voz.'); return; }
+        S.ignoreMic = false;
+      });
+    }
+
+    function endTurn() {
+      var t = S.turn;
+      if (S.phase !== 'listening' || !t || !t.open) return;
+      clearTimeout(S.silenceTimer);
+      S.ignoreMic = true;
+      turnDone();
+    }
+
+    function recordTurn(t, text) {
+      t.open = false;
+      t.text = text;
+      t.end = t.lastTs ? Math.min(Date.now(), t.lastTs + 1500) : Date.now();
+      if (!t.node) t.node = bubble('me');
+      paintInto(t.node, text);
+      t.r = evaluate(t);
+      t.a = analyze(text);
+      S.turns.push(t);
+      S.log.push({ who: 'me', text: text });
+    }
+
+    function turnDone() {
+      var t = S.turn;
+      if (!t || !t.open) return;
+      var text = join(t.finalText, t.interim).trim();
+      if (!text) { t.open = false; handleSilence(); return; }
+      recordTurn(t, text);
+      S.noSpeech = 0;
+      if (t.stage.id === 'name') S.name = extractName(text);
+      decideNext(t);
+    }
+
+    function handleSilence() {
+      S.noSpeech++;
+      if (S.noSpeech >= 2) {
+        if (S.turns.filter(function (x) { return !x.stage.noEval; }).length) { finishInterview(true); }
+        else { abort('No se detecta tu voz. Comprueba el micrófono e inténtalo de nuevo.'); }
+        return;
+      }
+      S.phase = 'thinking'; setLive();
+      later(function () { botSay('Perdona, no te he oído bien. ¿Puedes responder otra vez, un poco más cerca del micrófono?', S.stage, S.isFollow); }, 500);
+    }
+
+    function extractName(text) {
+      var t = text.trim().replace(/[.,!¡]/g, '');
+      var m = t.match(/(?:me llamo|mi nombre es|soy)\s+([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)/i);
+      var parts = t.split(/\s+/);
+      var cand = m ? m[1] : (parts.length <= 2 ? parts[parts.length - 1] : '');
+      if (!cand || cand.length < 2 || /^(hola|buenas|buenos|vale|sí|si|bueno|pues|eh|días|tardes)$/i.test(cand)) return '';
+      return cand.charAt(0).toUpperCase() + cand.slice(1).toLowerCase();
+    }
+
+    /* ---------- Motor conversacional local: cita lo que acabas de decir ---------- */
+    function pickFollowUp(t, x) {
+      var stage = t.stage, r = t.r, a = t.a;
+      if (S.followTotal >= MAX_FOLLOWUPS) return null;
+      /* Respuesta breve o incompleta: Marta tira del hilo de la última idea */
+      if (!stage.lenient && r.words < 15 && !S.pulled[stage.id]) {
+        S.pulled[stage.id] = true; S.needDetail++;
+        var q = a.last ? fill(pick('pull', PULL), a.last) : pick('pullg', PULL_GENERIC);
+        return { lead: '', q: q };
+      }
+      if (t.isFollow || S.followUsed[stage.id]) return null;
+      var list = stage.follow || [];
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].when(t, r, x)) {
+          var f = list[i];
+          if (stage.id === 'strengths' && a.trait) return { lead: 'Dices que eres ' + a.trait + '.', q: f.q.replace('esa cualidad', 'que eres ' + a.trait) };
+          if (a.hooks.length) return { lead: fill(a.hooks[0].hook.lead[0], a.hooks[0].t), q: f.q };
+          return f;
+        }
+      }
+      if (!S.hooksUsed.conf && (r.hedges.length >= 3 || /no sé|ni idea/.test(x))) {
+        S.hooksUsed.conf = true;
+        return { lead: 'Has dicho «' + (r.hedges[0] || 'no sé') + '» varias veces.', q: 'Si tuvieras que resumirlo en una frase, ¿por qué serías una buena opción para este puesto?' };
+      }
+      if (HOOK_STAGES.indexOf(stage.id) !== -1) {
+        for (var h = 0; h < a.hooks.length; h++) {
+          var hk = a.hooks[h];
+          if (!S.hooksUsed[hk.hook.id]) {
+            S.hooksUsed[hk.hook.id] = true;
+            var v = (rot['h' + hk.hook.id] = (rot['h' + hk.hook.id] || 0) + 1) - 1;
+            return { lead: fill(hk.hook.lead[v % hk.hook.lead.length], hk.t), q: hk.hook.q[(v + S.followTotal) % hk.hook.q.length] };
+          }
+        }
+      }
+      return null;
+    }
+
+    function reaction(t, x, willFollow) {
+      var r = t.r, a = t.a, stage = t.stage;
+      if (stage.noEval) return '';
+      if (stage.id === 'intro' && !t.isFollow) {
+        for (var i = 0; i < FIELDS.length; i++) { if (FIELDS[i][0].test(x)) return 'Entiendo, vienes del ámbito de ' + FIELDS[i][1] + '.'; }
+      }
+      if (r.words >= 15 && r.fillers / Math.max(r.seconds / 60, 0.2) >= 6 && S.calmUsed < 2) { S.calmUsed++; return 'Tranquilo' + (S.name ? ', ' + S.name : '') + ', no hay prisa.'; }
+      if (r.words < 15 || willFollow) return '';
+      var out;
+      if (a.nums.length) out = fill(pick('rn', R_NUM), a.nums[a.nums.length - 1].t);
+      else if (a.verbs.length) out = cap(fill(pick('rv', R_VERB), a.verbs[a.verbs.length - 1].t));
+      else if (a.names.length) out = fill(pick('rnm', R_NAME), a.names[a.names.length - 1].t);
+      else out = pick('ack', ACKS);
+      return join(out, stage.closing ? '' : pick('br', BRIDGES));
+    }
+
+    function cameraRemark(t) {
+      if (!t.longAway || S.camRemarks >= 2) return '';
+      return CAM_REMARKS[S.camRemarks++];
+    }
+
+    function decideNext(t) {
+      var stage = t.stage, x = t.text.toLowerCase();
+      S.phase = 'thinking'; setLive();
+      var camNote = cameraRemark(t);
+      var fu = (!stage.noEval && !stage.closing) ? pickFollowUp(t, x) : null;
+      var react = reaction(t, x, !!fu);
+      var local = function () {
+        if (fu) { S.followUsed[stage.id] = true; S.followTotal++; botSay(join(camNote, react, fu.lead, fu.q), stage, true); }
+        else nextStage(join(camNote, react));
+      };
+      if (GEMINI_API_KEY && !stage.noEval && !stage.closing) {
+        var run = S.run;
+        askGemini(t, camNote).then(function (o) {
+          if (S.run !== run) return;
+          if (o.accion === 'repregunta' && S.followTotal < MAX_FOLLOWUPS) { S.followUsed[stage.id] = true; S.followTotal++; botSay(o.texto, stage, true); }
+          else {
+            S.stageIdx++;
+            if (S.stageIdx >= STAGES.length) { closeInterview(); return; }
+            botSay(o.texto, STAGES[S.stageIdx], false);
+          }
+        }).catch(function (err) { if (S.run !== run) return; console.warn('[PULSO] Gemini no disponible, se usa el motor local:', err); local(); });
+      } else {
+        later(local, 700);
+      }
+    }
+
+    function nextStage(react) {
+      S.stageIdx++;
+      if (S.stageIdx >= STAGES.length) { closeInterview(); return; }
+      var st = STAGES[S.stageIdx];
+      botSay(join(react, fillQ(st.q)), st, false);
+    }
+
+    function closeInterview() {
+      var run = S.run;
+      var msg = 'Muchas gracias' + nameSuffix() + '. Hemos terminado; ahora verás tu valoración general.';
+      S.phase = 'asking'; S.ignoreMic = true; setLive();
+      el.stageLabel.textContent = 'Fin';
+      var tw = typeInto(bubble('bot'), msg, run); S.tw = tw;
+      speak(msg, function () { finishInterview(false); }, run, tw);
+    }
+
+    /* ---------- Opcional: Gemini redacta la siguiente intervención ---------- */
+    function askGemini(t, camNote) {
+      var next = STAGES[S.stageIdx + 1];
+      var canFollow = S.followTotal < MAX_FOLLOWUPS && !t.isFollow;
+      var gz = t.camN ? Math.round(100 * t.camLook / t.camN) : null;
+      var sys = [
+        'Eres ' + BOT + ', entrevistadora de selección de personal en una simulación de entrenamiento en español de España. El candidato es adulto y sabe que habla con una IA.',
+        'Escribe SOLO tu siguiente intervención hablada: una o dos frases cortas y una única pregunta. Natural, sin listas ni emojis.',
+        'Cita o nombra algo concreto que el candidato acaba de decir (un proyecto, una cifra, una herramienta, un cliente, un problema).',
+        'Si la respuesta fue breve o se quedó a medias, tira del hilo de la última idea que mencionó.',
+        'No comentes ni evalúes sus emociones (nunca digas que parece nervioso o inseguro).',
+        camNote ? 'Empieza con una observación breve y objetiva: ha mirado fuera de la cámara durante varios segundos; pídele que te mire al responder.' : '',
+        'Responde en JSON: {"accion":"repregunta"|"siguiente","texto":"..."}.',
+        canFollow ? 'Elige "repregunta" si merece la pena profundizar; si no, "siguiente".' : 'Debes elegir "siguiente".',
+        next ? 'Si eliges "siguiente", enlaza con naturalidad y formula esta pregunta (puedes adaptar la redacción): "' + fillQ(next.q) + '"' : 'Si eliges "siguiente", despídete en una frase.'
+      ].filter(Boolean).join('\n');
+      var cvx = $('pe-cv').value.trim();
+      if (cvx) sys += '\nDocumento del candidato (pregunta por su contenido concreto, sin leerlo): """' + cvx.slice(0, 3000).replace(/"""/g, '"') + '"""';
+      var hist = S.log.slice(-12).map(function (m) { return (m.who === 'bot' ? BOT : 'Candidato') + ': ' + m.text; }).join('\n');
+      var metrics = 'Métricas de su última respuesta: ' + t.r.words + ' palabras, ' + t.r.fillers + ' muletillas' + (gz != null ? ', contacto visual ' + gz + ' %' : '') + '. Bloque actual: ' + t.stage.label + '.';
+      var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+      var to = setTimeout(function () { if (ctrl) ctrl.abort(); }, GEMINI_TIMEOUT_MS);
+      return fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+        signal: ctrl ? ctrl.signal : undefined,
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: sys }] },
+          contents: [{ role: 'user', parts: [{ text: hist + '\n\n' + metrics }] }],
+          generationConfig: { temperature: 0.8, maxOutputTokens: 200, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
+        })
+      }).then(function (r) {
+        clearTimeout(to);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }).then(function (d) {
+        var txt = ((d.candidates || [])[0] || {}).content;
+        txt = txt && txt.parts ? txt.parts.map(function (p) { return p.text || ''; }).join('') : '';
+        var o = JSON.parse(txt);
+        if (!o || typeof o.texto !== 'string' || o.texto.trim().length < 5) throw new Error('Respuesta vacía');
+        o.texto = o.texto.trim().slice(0, 400);
+        if (o.accion !== 'repregunta' || !canFollow) o.accion = 'siguiente';
+        return o;
+      });
+    }
+
+    /* =====================================================
+       ANÁLISIS DE CADA RESPUESTA (no se muestra hasta el final)
+       ===================================================== */
+    function evaluate(t) {
+      var text = t.text, toks = tokenize(text);
+      var words = 0, fillers = 0, counts = {}, repeats = [];
+      toks.forEach(function (tk, i) {
+        words += tk.words;
+        if (tk.filler) { fillers++; counts[tk.key] = (counts[tk.key] || 0) + 1; }
+        else if (i > 0 && !toks[i - 1].filler && tk.key.length >= 2 && tk.key === toks[i - 1].key) repeats.push(tk.key);
+      });
+      var padded = ' ' + text.split(/\s+/).map(norm).join(' ') + ' ';
+      var hedges = [];
+      HEDGES.forEach(function (h) { var c = padded.split(' ' + h + ' ').length - 1; for (var k = 0; k < c; k++) hedges.push(h); });
+      return {
+        words: words, fillers: fillers, counts: counts, repeats: repeats, hedges: hedges,
+        firstIsFiller: !!(toks.length && toks[0].filler),
+        seconds: t.firstTs ? Math.max((t.end - t.firstTs) / 1000, 1) : 1,
+        pauses: t.pauses,
+        startDelay: t.firstTs ? (t.firstTs - t.startTs) / 1000 : null,
+        example: hasExample(text.toLowerCase())
+      };
+    }
+
+    function topKeys(counts, n) {
+      return Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).slice(0, n);
+    }
+    function uniq(arr) { return arr.filter(function (v, i) { return arr.indexOf(v) === i; }); }
+    function quote(a) { return a.map(function (v) { return '«' + v + '»'; }).join(', '); }
+
+    /* =====================================================
+       CÁMARA Y MIRADA (MediaPipe Face Landmarker, en el navegador)
+       Mide hacia dónde miras y si tu cara está en el plano.
+       No graba, no envía imágenes y no infiere emociones.
+       ===================================================== */
+    var CAM = { lm: null, loading: false, lastTs: 0, base: null, thr: null, cal: null, ema: null, away: false, flip: 0, miss: 0, awayStart: 0, awayCounted: false, awayDir: '', events: [], state: '' };
+    var MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+    function loadFaceModel() {
+      if (CAM.lm || CAM.loading) return;
+      CAM.loading = true;
+      setAtt('loading');
+      import(MP + '/vision_bundle.mjs').then(function (m) {
+        return m.FilesetResolver.forVisionTasks(MP + '/wasm').then(function (fs) {
+          return m.FaceLandmarker.createFromOptions(fs, {
+            baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task', delegate: 'GPU' },
+            runningMode: 'VIDEO', outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true, numFaces: 1
+          });
+        });
+      }).then(function (lm) { CAM.lm = lm; CAM.loading = false; el.permSt.textContent = 'Cámara y análisis de mirada activos. ' + PERM_DEFAULT; })
+        .catch(function (e) { CAM.loading = false; console.warn('[PULSO] Sin modelo de mirada', e); setAtt('nomodel'); el.permSt.textContent = 'La cámara está activa, pero no se pudo cargar el análisis de mirada (necesita internet). La entrevista sigue sin él.'; });
+    }
+
+    function setAtt(state) {
+      if (CAM.state === state) return;
+      CAM.state = state;
+      emit('att', state);
+      var map = {
+        loading: ['Cargando análisis de mirada…', 'var(--ink)'],
+        calibrating: ['Calibrando: mira a la cámara', 'var(--ink)'],
+        ok: ['Contacto visual OK', 'var(--ink)'],
+        away: ['Mirada fuera de cámara', 'var(--accent)'],
+        absent: ['Rostro fuera del plano', 'var(--accent)'],
+        nomodel: ['Análisis de mirada no disponible', 'var(--ink)']
+      }[state];
+      if (!map) return;
+      el.att.classList.remove('hidden');
+      el.attLabel.textContent = map[0]; el.attDot.style.background = map[1];
+    }
+
+    /* ---------- Lectura de la mirada ----------
+       Ojos: posición real del iris entre las comisuras (puntos 468 y 473 del modelo).
+       Vertical: blendshapes de mirada arriba/abajo. Cabeza: giro (yaw) e inclinación (pitch). */
+    var EYE_R = { a: 33, b: 133, top: 159, bot: 145, iris: 468 };
+    var EYE_L = { a: 362, b: 263, top: 386, bot: 374, iris: 473 };
+    function eyeRatio(p, e) {
+      var a = p[e.a], b = p[e.b], i = p[e.iris];
+      if (!a || !b || !i) return null;
+      var lo = Math.min(a.x, b.x), hi = Math.max(a.x, b.x);
+      return hi - lo > 1e-4 ? (i.x - lo) / (hi - lo) : null;
+    }
+    function readGaze(r) {
+      if (!r || !r.faceLandmarks || !r.faceLandmarks.length) return null;
+      var p = r.faceLandmarks[0];
+      var b = {}; ((r.faceBlendshapes && r.faceBlendshapes[0] && r.faceBlendshapes[0].categories) || []).forEach(function (c) { b[c.categoryName] = c.score; });
+      var g = function (k) { return b[k] || 0; };
+      var rr = eyeRatio(p, EYE_R), rl = eyeRatio(p, EYE_L);
+      var ex = rr != null && rl != null ? (rr + rl) / 2 : (rr != null ? rr : rl);
+      if (ex == null) ex = 0.5 + ((g('eyeLookOutLeft') - g('eyeLookInLeft')) + (g('eyeLookInRight') - g('eyeLookOutRight'))) / 8;
+      var v = ((g('eyeLookUpLeft') + g('eyeLookUpRight')) - (g('eyeLookDownLeft') + g('eyeLookDownRight'))) / 2;
+      var m = r.facialTransformationMatrixes && r.facialTransformationMatrixes[0];
+      var yaw = m ? Math.asin(clamp(m.data[8], -1, 1)) : 0;
+      var pitch = m ? Math.asin(clamp(-m.data[9], -1, 1)) : 0;
+      return { ex: ex, v: v, yaw: yaw, pitch: pitch };
+    }
+
+    /* ---------- Calibración: 2 segundos mirando a la cámara ----------
+       Guarda tu posición natural (mediana) y cuánto te mueves sin darte cuenta (desviación),
+       y con eso fija umbrales a tu medida. */
+    var GAZE_MIN_T = { ex: 0.07, v: 0.22, yaw: 0.26, pitch: 0.22 };   // umbrales mínimos
+    var calBox = $('pe-cal'), calText = $('pe-calText'), recalBtn = $('pe-recal');
+    function median(a) { var s = a.slice().sort(function (x, y) { return x - y; }); var k = s.length >> 1; return s.length % 2 ? s[k] : (s[k - 1] + s[k]) / 2; }
+    function std(a, m) { return Math.sqrt(a.reduce(function (x, y) { return x + (y - m) * (y - m); }, 0) / a.length); }
+    function startCalibration() {
+      if (!CAM.lm || !cameraOn()) return;
+      CAM.cal = { samples: [], t0: Date.now() };
+      CAM.base = null; CAM.away = false; CAM.flip = 0; CAM.miss = 0; CAM.ema = null;
+      calBox.classList.remove('hidden'); calText.textContent = 'Mira a la cámara';
+      setAtt('calibrating');
+    }
+    function calibrationStep(g) {
+      var c = CAM.cal, el2 = Date.now() - c.t0;
+      if (el2 < 700) { calText.textContent = 'Mira a la cámara'; return; }   // tiempo para colocarse
+      if (g) c.samples.push(g);
+      calText.textContent = 'Mira a la cámara · ' + Math.max(1, Math.ceil((2700 - el2) / 1000)) + '';
+      if (el2 < 2700 && c.samples.length < 14) return;
+      if (c.samples.length < 6) {
+        if (el2 > 7000) { CAM.cal = null; calText.textContent = 'No te veo bien. Centra la cara, busca luz de frente y pulsa «Recalibrar mirada».'; setAtt('absent'); }
+        return;
+      }
+      var base = {}, thr = {};
+      ['ex', 'v', 'yaw', 'pitch'].forEach(function (k) {
+        var xs = c.samples.map(function (s) { return s[k]; }), md = median(xs);
+        base[k] = md; thr[k] = Math.max(GAZE_MIN_T[k], 4 * std(xs, md));
+      });
+      CAM.base = base; CAM.thr = thr; CAM.cal = null;
+      calText.textContent = 'Calibrado';
+      setTimeout(function () { if (!CAM.cal) calBox.classList.add('hidden'); }, 900);
+      setAtt('ok');
+    }
+    recalBtn.addEventListener('click', function () { if (!CAM.lm) { loadFaceModel(); return; } startCalibration(); });
+
+    function camSample() {
+      if (!CAM.lm || !cameraOn() || el.video.readyState < 2) return;
+      var now = performance.now();
+      if (now - CAM.lastTs < CAM_SAMPLE_MS - 20) return;
+      CAM.lastTs = now;
+      var res; try { res = CAM.lm.detectForVideo(el.video, now); } catch (e) { return; }
+      var g = readGaze(res);
+      if (!CAM.base && !CAM.cal) startCalibration();
+      if (CAM.cal) { calibrationStep(g); return; }
+      if (!CAM.base) return;
+
+      /* Distancia a tu posición calibrada, en unidades de umbral (1 = en el límite), suavizada */
+      var dir = '';
+      if (!g) { CAM.miss++; if (CAM.miss >= 2) dir = 'fuera del plano'; }
+      else {
+        CAM.miss = 0;
+        var d = { ex: g.ex - CAM.base.ex, v: g.v - CAM.base.v, yaw: g.yaw - CAM.base.yaw, pitch: g.pitch - CAM.base.pitch };
+        CAM.ema = CAM.ema ? { ex: CAM.ema.ex * 0.4 + d.ex * 0.6, v: CAM.ema.v * 0.4 + d.v * 0.6, yaw: CAM.ema.yaw * 0.4 + d.yaw * 0.6, pitch: CAM.ema.pitch * 0.4 + d.pitch * 0.6 } : d;
+        var e = CAM.ema;
+        var hs = Math.max(Math.abs(e.ex) / CAM.thr.ex, Math.abs(e.yaw) / CAM.thr.yaw);
+        var vs = Math.max(Math.abs(e.v) / CAM.thr.v, Math.abs(e.pitch) / CAM.thr.pitch);
+        var score = Math.max(hs, vs);
+        /* Histéresis: hace falta pasarse del umbral dos veces seguidas para "fuera",
+           y volver claramente dentro (75 % del umbral) dos veces para "OK" */
+        if (!CAM.away) { CAM.flip = score > 1 ? CAM.flip + 1 : 0; if (CAM.flip >= 2) { CAM.away = true; CAM.flip = 0; } }
+        else { CAM.flip = score < 0.75 ? CAM.flip + 1 : 0; if (CAM.flip >= 2) { CAM.away = false; CAM.flip = 0; } }
+        if (CAM.away) dir = hs >= vs ? 'a un lado' : ((Math.abs(e.v) / CAM.thr.v >= Math.abs(e.pitch) / CAM.thr.pitch ? e.v > 0 : e.pitch > 0) ? 'hacia arriba' : 'hacia abajo');
+      }
+      setAtt(dir ? (dir === 'fuera del plano' ? 'absent' : 'away') : 'ok');
+
+      /* Solo cuenta mientras respondes */
+      var t = S.turn;
+      if (S.phase !== 'listening' || !t || !t.open) { CAM.awayStart = 0; CAM.awayCounted = false; return; }
+      t.camN++;
+      if (dir === 'fuera del plano') t.camOut++;
+      if (!dir) { t.camLook++; CAM.awayStart = 0; CAM.awayCounted = false; return; }
+      var wall = Date.now();
+      if (!CAM.awayStart) { CAM.awayStart = wall; CAM.awayDir = dir; }
+      var dur = wall - CAM.awayStart;
+      if (dur >= GAZE_EVENT_MS && !CAM.awayCounted) {
+        CAM.awayCounted = true; t.camEvents++;
+        t.camDirs[CAM.awayDir] = (t.camDirs[CAM.awayDir] || 0) + 1;
+        CAM.events.push({ label: lbl(t), dir: CAM.awayDir });
+      }
+      if (dur >= GAZE_LONG_MS) t.longAway = true;
+    }
+
+    /* =====================================================
+       VALORACIÓN GENERAL (toda la conversación)
+       ===================================================== */
+    function aggregate() {
+      var ts = S.turns.filter(function (t) { return !t.stage.noEval; });
+      var A = { turns: ts, words: 0, fillers: 0, seconds: 0, pauses: 0, counts: {}, hedges: [], repeats: [], delays: [], camN: 0, camLook: 0, camOut: 0, camEvents: 0, camDirs: {} };
+      ts.forEach(function (t) {
+        var r = t.r;
+        A.words += r.words; A.fillers += r.fillers; A.seconds += r.seconds; A.pauses += r.pauses;
+        Object.keys(r.counts).forEach(function (k) { A.counts[k] = (A.counts[k] || 0) + r.counts[k]; });
+        A.hedges = A.hedges.concat(r.hedges); A.repeats = A.repeats.concat(r.repeats);
+        if (r.startDelay != null) A.delays.push(r.startDelay);
+        A.camN += t.camN; A.camLook += t.camLook; A.camOut += t.camOut; A.camEvents += t.camEvents;
+        Object.keys(t.camDirs).forEach(function (k) { A.camDirs[k] = (A.camDirs[k] || 0) + t.camDirs[k]; });
+      });
+      var min = Math.max(A.seconds / 60, 0.2);
+      A.fillerRate = A.words >= 30 ? A.fillers / min : null;
+      A.wpm = A.words >= 30 ? A.words / min : null;
+      A.avgDelay = avg(A.delays);
+      A.short = ts.filter(function (t) { return !t.stage.lenient && t.r.words < 20; });
+      var exTurns = ts.filter(function (t) { return t.stage.example && !t.isFollow; });
+      A.exTotal = exTurns.length;
+      A.exMissing = exTurns.filter(function (t) { return !t.r.example && !followHasExample(t.stage.id); });
+      A.exGiven = A.exTotal - A.exMissing.length;
+      A.gaze = A.camN >= 8 ? 100 * A.camLook / A.camN : null;
+      A.topDir = topKeys(A.camDirs, 1)[0] || '';
+      /* desvíos por bloque de la entrevista */
+      var byStage = {};
+      ts.forEach(function (t) { if (t.camEvents) { var k = t.stage.label; byStage[k] = byStage[k] || { n: 0, dirs: {} }; byStage[k].n += t.camEvents; Object.keys(t.camDirs).forEach(function (d) { byStage[k].dirs[d] = (byStage[k].dirs[d] || 0) + t.camDirs[d]; }); } });
+      A.gazeByStage = byStage;
+      return A;
+    }
+
+    function followHasExample(stageId) {
+      return S.turns.some(function (t) { return t.isFollow && t.stage.id === stageId && t.r.example; });
+    }
+
+    var DIR_TIP = {
+      'hacia arriba': 'evita mirar al techo al recordar datos: si necesitas pensar, haz una pausa breve mirando a cámara',
+      'hacia abajo': 'evita mirar hacia abajo (notas, teclado o móvil): ten tus tres ideas clave en la cabeza, no en el papel',
+      'a un lado': 'evita mirar a los lados: coloca la ventana de la entrevista justo debajo de la cámara',
+      'fuera del plano': 'mantente dentro del encuadre, con la cara centrada y bien iluminada'
+    };
+
+    function buildReport(A, early) {
+      var issues = 0;
+      if (A.fillerRate != null) issues += A.fillerRate >= 6 ? 2 : (A.fillerRate >= 3 ? 1 : 0);
+      if (A.wpm != null) issues += (A.wpm < 110 || A.wpm > 180) ? 2 : ((A.wpm < 125 || A.wpm > 170) ? 1 : 0);
+      if (A.short.length >= 2) issues += 1;
+      if (A.short.length >= 4) issues += 1;
+      if (A.hedges.length >= Math.max(4, A.turns.length)) issues += 1;
+      if (A.exMissing.length >= 2) issues += 1;
+      if (A.pauses >= Math.max(3, A.turns.length)) issues += 1;
+      if (A.gaze != null && A.gaze < 60) issues += 1;
+      var verdict = issues <= 1
+        ? 'Entrevista sólida. Respondes con claridad y seguridad; ahora toca pulir los detalles.'
+        : (issues <= 3
+          ? 'Buen punto de partida. Hay dos o tres hábitos concretos que, al corregirlos, harán tus respuestas mucho más convincentes.'
+          : 'Tienes un margen de mejora claro, y es una buena noticia: con práctica repetida estos hábitos cambian rápido. Empieza por el primero de la lista.');
+
+      var good = [];
+      if (A.fillerRate != null && A.fillerRate < 3) good.push('Casi no usas muletillas: tu discurso suena fluido y seguro.');
+      if (A.wpm != null && A.wpm >= 125 && A.wpm <= 170) good.push('Tu ritmo (' + Math.round(A.wpm) + ' palabras/min) es cómodo de seguir.');
+      if (A.hedges.length <= 1 && A.words >= 30) good.push('Afirmas con seguridad: casi no usas expresiones de duda.');
+      if (A.exTotal && A.exGiven >= Math.ceil(A.exTotal / 2)) good.push('Apoyas tus respuestas con ejemplos concretos, que es lo que más se recuerda.');
+      if (A.short.length === 0 && A.words >= 30) good.push('Tus respuestas tienen una extensión adecuada: ni cortas ni excesivas.');
+      if (A.avgDelay != null && A.avgDelay <= 3) good.push('Empiezas a responder sin dudar, con buena reacción.');
+      if (A.gaze != null && A.gaze >= 80) good.push('Mantuviste la mirada en la cámara el ' + Math.round(A.gaze) + ' % del tiempo que respondías' + (A.camEvents <= 1 ? ', casi sin desvíos.' : '.'));
+      if (!early && !good.length) good.push('Has completado la entrevista de principio a fin, que es el primer paso para mejorar.');
+
+      var tips = [];
+      if (A.fillerRate != null && A.fillerRate >= 3) {
+        tips.push('Cambia las muletillas (' + quote(topKeys(A.counts, 3)) + ') por un silencio breve. Una pausa de medio segundo suena más segura que un relleno.');
+      }
+      if (A.gaze != null && A.gaze < 80) tips.push('Miraste a cámara el ' + Math.round(A.gaze) + ' % del tiempo (objetivo: más del 80 %). ' + cap(DIR_TIP[A.topDir] || DIR_TIP['a un lado']) + '.');
+      if (A.wpm != null && A.wpm < 125) tips.push('Hablas despacio (' + Math.round(A.wpm) + ' palabras/min). Prepara tres ideas clave por pregunta y pasa de una a otra sin buscar las palabras.');
+      if (A.wpm != null && A.wpm > 170) tips.push('Hablas muy rápido (' + Math.round(A.wpm) + ' palabras/min). Haz una pausa al final de cada idea para que se asiente.');
+      if (S.needDetail >= 1 || A.short.length >= 2) {
+        tips.push('Algunas respuestas fueron muy cortas' + (S.needDetail ? ' y ' + BOT + ' tuvo que pedirte más detalle' + (S.needDetail > 1 ? ' (' + S.needDetail + ' veces)' : '') : '') + '. Prepara de antemano tres ideas para las preguntas típicas.');
+      }
+      if (A.exMissing.length) tips.push('Faltaron ejemplos o cifras concretas en algunas respuestas. Usa el esquema situación, lo que hiciste tú y resultado.');
+      if (A.hedges.length >= 4) tips.push('Usas expresiones que restan seguridad (' + quote(uniq(A.hedges).slice(0, 3)) + '). Afirma lo que sabes y explica cómo aprenderías lo que no.');
+      if (A.repeats.length >= 2) tips.push('Repites palabras seguidas (' + uniq(A.repeats).slice(0, 3).join(', ') + '). Piensa la frase antes de empezarla.');
+      if (A.pauses >= Math.max(3, A.turns.length)) tips.push('Tienes silencios largos a mitad de respuesta. Un esquema mental te ayuda a no perder el hilo.');
+      if (A.avgDelay != null && A.avgDelay > 5) tips.push('Tardas unos ' + num(A.avgDelay, 0) + ' s en empezar a responder. Está bien pensar, pero intenta tener lista la primera frase en 2 o 3 segundos.');
+      if (!tips.length) tips.push('No hay ningún hábito urgente que corregir. Siguiente reto: repite la entrevista con respuestas más breves y añade una cifra o un resultado a cada ejemplo.');
+      tips = tips.slice(0, 5);
+
+      var moments = [], worst = null;
+      A.turns.forEach(function (t) {
+        if (t.r.words >= 25) {
+          var rate = t.r.fillers / Math.max(t.r.seconds / 60, 0.2);
+          if (!worst || rate > worst.rate) worst = { t: t, rate: rate };
+        }
+      });
+      var gs = Object.keys(A.gazeByStage).sort(function (a, b) { return A.gazeByStage[b].n - A.gazeByStage[a].n; })[0];
+      if (gs && A.gazeByStage[gs].n >= 1) {
+        var d = topKeys(A.gazeByStage[gs].dirs, 1)[0];
+        moments.push('En la pregunta de «' + gs + '» desviaste la mirada ' + A.gazeByStage[gs].n + (A.gazeByStage[gs].n === 1 ? ' vez, ' : ' veces, sobre todo ') + d + '; ' + (DIR_TIP[d] || DIR_TIP['a un lado']) + '.');
+      }
+      if (worst && worst.rate >= 3) moments.push('Más muletillas en «' + lbl(worst.t) + '»: unas ' + num(worst.rate, 0) + ' por minuto.');
+      A.short.slice(0, 2).forEach(function (t) { moments.push('Respuesta muy corta en «' + lbl(t) + '» (' + t.r.words + ' palabras).'); });
+      A.exMissing.slice(0, 1).forEach(function (t) { moments.push('Sin ejemplo concreto en «' + lbl(t) + '».'); });
+      var doubt = null;
+      A.turns.forEach(function (t) { if (t.r.hedges.length >= 3 && (!doubt || t.r.hedges.length > doubt.r.hedges.length)) doubt = t; });
+      if (doubt) moments.push('Dudas en «' + lbl(doubt) + '»: ' + quote(uniq(doubt.r.hedges).slice(0, 3)) + '.');
+      moments = moments.slice(0, 4);
+
+      return { verdict: verdict, good: good, tips: tips, moments: moments };
+    }
+
+    function lbl(t) { return t.stage.label + (t.isFollow ? ' (seguimiento)' : ''); }
+
+    function liHtml(items, bad) {
+      return items.map(function (t) {
+        return '<li class="flex gap-3"><span class="mt-[9px] w-2.5 h-2.5 shrink-0 rounded-full" style="background:' + (bad ? 'var(--accent)' : 'var(--ink)') + '"></span><span>' + esc(t) + '</span></li>';
+      }).join('');
+    }
+
+    function setBar(id, pct, level) {
+      var b = $(id);
+      b.style.width = clamp(pct, 0, 100) + '%';
+      b.className = 'bar-fill lvl-' + level + ((id === 'pe-bPace' || id === 'pe-bGaze') ? ' relative' : '');
+    }
+
+    function paintReport(early) {
+      var A = aggregate();
+      el.idle.classList.add('hidden');
+      el.report.classList.remove('hidden');
+      $('pe-sideNote').textContent = 'Tu valoración está debajo de la entrevista.';
+      var earlyEl = $('pe-early');
+      earlyEl.classList.toggle('hidden', !early);
+      if (early) earlyEl.textContent = 'Has terminado la entrevista antes de tiempo: esta valoración se basa en las ' + A.turns.length + ' respuestas que diste.';
+
+      if (!A.turns.length) {
+        $('pe-verdict').textContent = 'Todavía no hay respuestas suficientes para valorar. Haz una entrevista completa y vuelve a verlo.';
+        ['pe-mFiller', 'pe-mPace', 'pe-mWords', 'pe-mPauses', 'pe-mTurns', 'pe-mGaze', 'pe-mGazeEv'].forEach(function (id) { $(id).textContent = '—'; });
+        setBar('pe-bFiller', 0, 'none'); setBar('pe-bPace', 0, 'none'); setBar('pe-bGaze', 0, 'none');
+        $('pe-fillerList').textContent = ''; $('pe-tips').innerHTML = '';
+        $('pe-goodBox').classList.add('hidden'); $('pe-momentsBox').classList.add('hidden');
+        return;
+      }
+      var rep = buildReport(A, early);
+      $('pe-verdict').textContent = 'Muletillas detectadas: ' + A.fillers + ' (en ' + A.words + ' palabras)';
+      $('pe-tbody').innerHTML = extras(A); $('pe-tableWrap').classList.remove('hidden'); segInfo();
+
+      if (A.fillerRate == null) { $('pe-mFiller').textContent = '—'; setBar('pe-bFiller', 0, 'none'); }
+      else {
+        $('pe-mFiller').textContent = num(A.fillerRate, 1);
+        setBar('pe-bFiller', Math.max((A.fillerRate / 12) * 100, 3), A.fillerRate < 3 ? 'good' : (A.fillerRate < 6 ? 'warn' : 'bad'));
+      }
+      if (A.wpm == null) { $('pe-mPace').textContent = '—'; setBar('pe-bPace', 0, 'none'); }
+      else {
+        $('pe-mPace').textContent = String(Math.round(A.wpm));
+        setBar('pe-bPace', (A.wpm / 260) * 100, (A.wpm >= 130 && A.wpm <= 160) ? 'good' : ((A.wpm >= 110 && A.wpm <= 180) ? 'warn' : 'bad'));
+      }
+      if (A.gaze == null) {
+        $('pe-mGaze').textContent = '—'; setBar('pe-bGaze', 0, 'none');
+        $('pe-mGazeEv').textContent = S.hadVideo ? 'sin datos suficientes del análisis de mirada' : 'cámara no activada';
+      } else {
+        $('pe-mGaze').textContent = Math.round(A.gaze) + ' %';
+        setBar('pe-bGaze', A.gaze, A.gaze >= 80 ? 'good' : (A.gaze >= 60 ? 'warn' : 'bad'));
+        $('pe-mGazeEv').textContent = A.camEvents + (A.camEvents === 1 ? ' desvío de mirada' : ' desvíos de mirada') + ' de más de 1 s';
+      }
+      $('pe-mWords').textContent = String(A.words);
+      $('pe-mPauses').textContent = String(A.pauses);
+      $('pe-mTurns').textContent = String(A.turns.length);
+      var tf = topKeys(A.counts, 8);
+      $('pe-fillerList').textContent = tf.length
+        ? 'Muletillas detectadas: ' + tf.map(function (f) { return f + ' (' + A.counts[f] + ')'; }).join(', ') + '.'
+        : (A.words >= 30 ? 'No se han detectado muletillas.' : '');
+
+      $('pe-goodBox').classList.toggle('hidden', !rep.good.length);
+      $('pe-good').innerHTML = liHtml(rep.good, false);
+      $('pe-tips').innerHTML = liHtml(rep.tips, true);
+      $('pe-momentsBox').classList.toggle('hidden', !rep.moments.length);
+      $('pe-moments').innerHTML = liHtml(rep.moments, true);
+    }
+
+    /* =====================================================
+       INICIO, FIN Y CONTROLES
+       ===================================================== */
+    function emitLive(sec) {
+      var words = 0, fillers = 0, secs = 0, n = 0, look = 0, lat = [];
+      S.turns.forEach(function (t) {
+        if (t.stage.noEval) return;
+        words += t.r.words; fillers += t.r.fillers; secs += t.r.seconds; n += t.camN; look += t.camLook;
+        if (t.r.startDelay != null && !t.afterInt) lat.push(t.r.startDelay);
+      });
+      var t = S.turn;
+      if (t && t.open && !t.stage.noEval) {
+        if (t.firstTs) { tokenize(join(t.finalText, t.interim)).forEach(function (k) { words += k.words; if (k.filler) fillers++; }); secs += Math.max(1, (Date.now() - t.firstTs) / 1000); }
+        n += t.camN; look += t.camLook;
+      }
+      var min = Math.max(secs / 60, 0.1);
+      emit('live', { sec: sec, words: words, fillers: fillers, fpm: words >= 12 ? fillers / min : null, wpm: words >= 12 ? words / min : null,
+        gaze: n >= 5 ? 100 * look / n : null, latency: avg(lat), stage: S.stage ? S.stage.label + (S.isFollow ? ' · seguimiento' : '') : '',
+        idx: S.stageIdx, total: STAGES.length, phase: S.phase, att: CAM.state, hostility: hostility() });
+    }
+
+    function tick() {
+      var sec = (Date.now() - S.startTs) / 1000;
+      el.timer.textContent = clock(sec);
+      emitLive(sec);
+      var t = S.turn;
+      if (S.phase === 'listening' && t && t.open) {
+        var now = Date.now();
+        if (!t.firstTs) { if (now - t.startTs > NO_SPEECH_MS) endTurn(); }
+        else {
+          var words = countWords(join(t.finalText, t.interim));
+          if (shouldInterrupt(t, words, now)) { interruptNow(); return; }
+          /* Red de seguridad: una sola palabra («Ana», «no») o un temporizador perdido */
+          if ((words < 2 && now - t.lastTs > ONE_WORD_MS) || now - t.lastTs > (words < 4 ? SILENCE_SHORT_MS : SILENCE_MS) + 1500 || now - t.firstTs > MAX_TURN_S * 1000) endTurn();
+        }
+      }
+    }
+
+    /* ---------- Cámara: la ves siempre, antes, durante y después de la entrevista ---------- */
+    var camBtn = $('pe-camBtn'), camStop = $('pe-camStop'), camTimer = null;
+    function cameraOn() { return !!(S.cam && S.cam.getVideoTracks().some(function (tr) { return tr.readyState === 'live'; })); }
+    function startCamera() {
+      if (cameraOn()) return Promise.resolve(true);
+      var md = navigator.mediaDevices;
+      if (!md || !md.getUserMedia) { el.permSt.textContent = 'Tu navegador no permite usar la cámara aquí.'; return Promise.resolve(false); }
+      camBtn.disabled = true; camBtn.textContent = 'Encendiendo…';
+      return md.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' }, audio: false }).then(function (stream) {
+        S.cam = stream;
+        el.video.srcObject = stream;
+        var p = el.video.play(); if (p && p.catch) p.catch(function () { /* autoplay silenciado */ });
+        el.camOff.classList.add('hidden'); camStop.classList.remove('hidden'); recalBtn.classList.remove('hidden');
+        el.permSt.textContent = PERM_DEFAULT;
+        loadFaceModel();
+        if (!camTimer) camTimer = setInterval(camSample, CAM_SAMPLE_MS);
+        if (S.phase !== 'idle' && S.phase !== 'done') S.hadVideo = true;
+        emit('camera', true);
+        return true;
+      }).catch(function (e) {
+        el.permSt.textContent = e && e.name === 'NotFoundError' ? 'No se encuentra ninguna cámara. La entrevista funciona igual, sin medir el contacto visual.' : 'No se ha permitido la cámara. La entrevista funciona igual, sin medir el contacto visual.';
+        return false;
+      }).then(function (ok) { camBtn.disabled = false; camBtn.textContent = 'Encender cámara'; return ok; });
+    }
+    function stopCamera() {
+      if (S.cam) { S.cam.getTracks().forEach(function (tr) { tr.stop(); }); S.cam = null; }
+      if (camTimer) { clearInterval(camTimer); camTimer = null; }
+      el.video.srcObject = null;
+      el.camOff.classList.remove('hidden'); camStop.classList.add('hidden');
+      el.att.classList.add('hidden'); CAM.state = '';
+      CAM.base = null; CAM.cal = null; calBox.classList.add('hidden'); recalBtn.classList.add('hidden');
+      emit('camera', false);
+    }
+    camBtn.addEventListener('click', startCamera);
+    camStop.addEventListener('click', stopCamera);
+    window.addEventListener('pagehide', stopCamera);
+
+    function stopAll() {
+      if (S.tw) S.tw.finish();
+      S.run++;
+      clearTimeout(S.silenceTimer);
+      if (S.tickId) { clearInterval(S.tickId); S.tickId = null; }
+      S.ignoreMic = true; S.recogAlive = false;
+      if (S.turn) S.turn.open = false;
+      if (S.recog) {
+        var r = S.recog; S.recog = null;
+        r.onend = null; r.onerror = null; r.onresult = null;
+        try { r.abort(); } catch (e) { /* ya parado */ }
+      }
+      if (hasTTS) { try { window.speechSynthesis.cancel(); } catch (e) { /* sin voz */ } }
+      lockDemoMic(false);
+    }
+
+    function abort(msg) {
+      stopAll();
+      stopCamera();
+      emit('abort', msg);
+      S.phase = 'idle'; setLive(); setButtons(false);
+      el.stageLabel.textContent = 'Interrumpida';
+      note(msg);
+    }
+
+    function finishInterview(early) {
+      stopAll();
+      S.phase = 'done'; setLive(); setButtons(false);
+      el.stageLabel.textContent = 'Terminada';
+      el.startLabel.textContent = 'Nueva entrevista';
+      note(NOTE_DEFAULT);
+      paintReport(early);
+      stopCamera();   /* fin de la entrevista: se apaga la cámara */
+      var A = aggregate();
+      emit('done', { date: new Date().toISOString(), early: !!early, turns: A.turns.length, words: A.words, fillers: A.fillers,
+        fpm: A.fillerRate, wpm: A.wpm, gaze: A.gaze, events: A.camEvents, latency: A.avgDelay, hostility: hostility() });
+    }
+
+    function resetAll() {
+      S.recog = null;
+      S.turns = []; S.log = []; S.stageIdx = 0; S.name = ''; S.followUsed = {}; S.followTotal = 0; S.hooksUsed = {}; S.pulled = {};
+      S.interrupted = false; S.interrupts = 0; S.afterInt = false; S.camRemarks = 0; rot = {};
+      CAM.awayStart = 0; CAM.awayCounted = false; CAM.events = [];
+      S.needDetail = 0; S.calmUsed = 0; S.noSpeech = 0; S.turn = null; S.ignoreMic = true;
+      el.chat.innerHTML = '';
+      el.report.classList.add('hidden'); el.idle.classList.remove('hidden');
+      $('pe-sideNote').textContent = 'Al terminar, tu valoración aparecerá debajo de la entrevista.'; $('pe-tableWrap').classList.add('hidden');
+      el.timer.textContent = '0:00';
+    }
+
+    /* El micrófono se pide una sola vez, en tu primera respuesta: lo solicita el propio
+       reconocimiento de voz, que se mantiene abierto durante toda la entrevista. */
+    function requestMedia(done) {
+      note('Te toca responder. Si el navegador te lo pide, permite el micrófono: solo te lo pedirá esta vez.');
+      done();
+    }
+
+    function launch() {
+      resetAll();
+      S.run++;
+      S.hadVideo = cameraOn();
+      S.startTs = Date.now();
+      lockDemoMic(true);
+      setButtons(true);
+      note(NOTE_DEFAULT);
+      MAX_FOLLOWUPS = clamp(2 + Math.round(hostility() / 2.5), 2, 6);
+      S.tickId = setInterval(tick, CAM_SAMPLE_MS);
+      botSay(fillQ(STAGES[0].q), STAGES[0], false);
+    }
+
+    /* Al empezar no se pide ningún permiso: Marta hace la primera pregunta
+       y el micrófono se solicita cuando te toca responder. */
+    function startInterview() {
+      if (!SR) return;
+      if (demoMicBusy()) { note('Detén primero el micrófono de la demostración de arriba y vuelve a intentarlo.'); return; }
+      startCamera().then(launch);   /* la cámara se enciende al empezar y sigue encendida al terminar */
+    }
+
+    /* Con más hostilidad, Marta corta antes y en más preguntas */
+    function shouldInterrupt(t, words, now) {
+      var H = hostility(), st = S.stage;
+      if (H < 4 || !st || st.noEval || st.closing || S.isFollow || words < 18) return false;
+      if ((S.interrupts || 0) >= (H >= 8 ? 2 : 1)) return false;
+      if (H < 6 && st.id !== 'challenge') return false;
+      return now - t.firstTs > (22 - H * 1.4) * 1000;
+    }
+
+    function interruptNow() {
+      var t = S.turn; S.interrupted = true; S.interrupts = (S.interrupts || 0) + 1; emit('interrupt');
+      clearTimeout(S.silenceTimer); S.ignoreMic = true;
+      recordTurn(t, join(t.finalText, t.interim).trim());
+      S.afterInt = true;
+      var a = t.a, topic = a && a.hooks.length ? a.hooks[a.hooks.length - 1].t : (a && a.last) || '';
+      botSay('Perdona que te interrumpa. ' + (topic ? 'Sobre «' + topic + '»: ' : 'Voy al grano: ') + '¿qué hiciste tú, exactamente, y con qué resultado?', t.stage, true);
+    }
+
+    var SEG = {
+      b2c: ['El CV y los certificados no demuestran cómo reaccionas bajo presión', 'Entrena con tu CV o tu pitch real y enséñalo en LinkedIn', 'Ensayar frente al espejo, sesiones con coach de comunicación'],
+      b2b: ['Cribados telefónicos lentos y subjetivos para puestos de cara al cliente', 'Antes de la primera entrevista, ves cómo el candidato vende tu producto ante un cliente difícil', 'Llamadas de cribado, assessment centers presenciales'],
+      edu: ['Las soft skills se enseñan pero no se practican a escala ni se acreditan', 'Cada alumno hace negociaciones de alto nivel evaluables, con informe para el profesor', 'Role-plays en clase con actores o compañeros']
+    };
+    function segInfo() {
+      var d = SEG[$('pe-seg').value], k = ['Dolor', 'Promesa PULSO', 'Sustituye a'];
+      $('pe-segInfo').innerHTML = d.map(function (t, i) { return '<div class="bg-tone p-4"><dt class="t-small font-semibold muted">' + k[i] + '</dt><dd class="mt-1">' + esc(t) + '</dd></div>'; }).join('');
+    }
+    $('pe-seg').addEventListener('change', segInfo);
+    function extras(A) {
+      var rows = [], sc = [], ts = A.turns;
+      function add(n, q, c, res, s, w) { rows.push([n, q, c, res]); if (s != null) sc.push([clamp(s, 0, 100), w]); }
+      var rec = ts.filter(function (t) { return t.afterInt && t.r.startDelay != null; }).map(function (t) { return t.r.startDelay; });
+      add('Recuperación tras interrupción', 'Segundos hasta retomar un argumento coherente', 'Marcas de tiempo + análisis del transcript', rec.length ? num(rec[0], 1) + ' s' : 'Sin interrupción (Marta interrumpe en «Situación difícil» si hablas más de 10 s)', rec.length ? 100 - (rec[0] - 3) / 7 * 100 : null, 15);
+      var lat = ts.filter(function (t) { return !t.afterInt && t.r.startDelay != null; }).map(function (t) { return t.r.startDelay; });
+      add('Latencia de respuesta', 'Tiempo entre la pregunta de la IA y la respuesta', 'Marcas de tiempo del audio', lat.length ? num(avg(lat), 1) + ' s de media (máx. ' + num(Math.max.apply(null, lat), 1) + ' s)' : '—', lat.length ? 100 - (avg(lat) - 2) / 6 * 100 : null, 10);
+      var w = ts.filter(function (t) { return t.r.words >= 15; }).map(function (t) { return t.r.words / (t.r.seconds / 60); }), wres = '—', ws = null;
+      if (w.length > 1) { var mu = avg(w), sd = Math.sqrt(avg(w.map(function (x) { return (x - mu) * (x - mu); }))); wres = Math.round(mu) + ' palabras/min · variación ±' + Math.round(sd) + ' (de ' + Math.round(Math.min.apply(null, w)) + ' a ' + Math.round(Math.max.apply(null, w)) + ')'; ws = 100 - (sd - 15) / 35 * 100; }
+      else if (w.length) wres = Math.round(w[0]) + ' palabras/min (hace falta más de una respuesta larga para medir la estabilidad)';
+      add('Ritmo (WPM) y estabilidad', 'Si aceleras o te atropellas cuando sube la hostilidad', 'Palabras por minuto por tramo', wres, ws, 15);
+      var fr = A.seconds ? A.fillers / Math.max(A.seconds / 60, 0.2) : null;
+      add('Muletillas por minuto', 'Precisión verbal', 'Transcript', A.fillers + ' muletillas en total' + (fr != null ? ' · ' + num(fr, 1) + ' por minuto' : ''), fr != null ? 100 - fr / 9 * 100 : null, 15);
+      var cv = $('pe-cv').value.toLowerCase(), nums = 0, hit = 0, cres = 'Pega tu CV (opcional) para medirlo';
+      if (cv.trim()) { ts.forEach(function (t) { (t.text.match(/\d+(?:[.,]\d+)?/g) || []).forEach(function (n) { nums++; if (cv.indexOf(n) !== -1) hit++; }); }); cres = nums ? hit + ' de ' + nums + ' cifras dichas aparecen en tu documento' : 'No citaste cifras'; }
+      add('Precisión sobre el documento', 'Si defiendes bien las cifras de tu CV o dossier', 'Contraste RAG respuesta vs. documento', cres, cv.trim() && nums ? hit / nums * 100 : null, 15);
+      var con = 0; ts.forEach(function (t) { var x = t.text.toLowerCase(); var c = (x.match(/de acuerdo|tienes razón|acepto|como quieras/g) || []).length; if (c && !/a cambio|siempre que|con la condición/.test(x)) con += c; });
+      add('Firmeza negociadora', 'Concesiones hechas sin contrapartida', 'Clasificación del transcript por LLM con rúbrica', con + ' concesiones sin contrapartida', 100 - con * 25, 10);
+      var long = ts.filter(function (t) { return t.r.words >= 25; });
+      var full = long.filter(function (t) { var x = t.text.toLowerCase(); return /creo que|lo principal|diría|porque|motivo|soy /.test(x) && t.r.example && /por eso|en resumen|en definitiva|al final|por tanto|así que|en conclusión|resultado/.test(x); });
+      add('Estructura argumental', 'Claridad: tesis, prueba, cierre', 'Rúbrica evaluada por LLM', long.length ? full.length + ' de ' + long.length + ' respuestas con tesis, prueba y cierre' : '—', long.length ? full.length / long.length * 100 : null, 10);
+      var hadCam = S.turns.some(function (t) { return t.camN > 0; });
+      add('Contacto visual con la cámara', 'Mirada dirigida a la cámara mientras respondes y desvíos de más de 1 s', 'Face Landmarker (MediaPipe) en el navegador: posición del iris y giro de la cabeza, 5 veces por segundo, calibrado a tu mirada; no se graba', A.gaze != null ? Math.round(A.gaze) + ' % del tiempo · ' + A.camEvents + ' desvíos' + (A.topDir ? ' (sobre todo ' + A.topDir + ')' : '') + ' · rostro fuera de plano ' + Math.round(A.camOut * CAM_SAMPLE_MS / 1000) + ' s' : (hadCam ? 'Sin datos suficientes' : 'Cámara o análisis de mirada no disponibles'), A.gaze, 10);
+      var tw = 0, ss = 0; sc.forEach(function (p) { ss += p[0] * p[1]; tw += p[1]; });
+      rows.unshift(['Índice de Sincronía (0–100)', 'Indicador compuesto de control de la conversación', 'Media ponderada de las métricas siguientes', tw ? Math.round(ss / tw) + ' / 100 (con ' + sc.length + ' métricas medidas)' : '—']);
+      return rows.map(function (p, i) { return '<tr style="border-top:1px solid var(--line)">' + p.map(function (c, j) { return '<td class="p-3 align-top' + (i === 0 && j < 4 ? ' font-semibold' : '') + '">' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('');
+    }
+
+    el.start.addEventListener('click', startInterview);
+    el.answer.addEventListener('click', endTurn);
+    el.end.addEventListener('click', function () {
+      var t = S.turn;
+      if (S.phase === 'listening' && t && t.open) {
+        var text = join(t.finalText, t.interim).trim();
+        if (text) recordTurn(t, text); else t.open = false;
+      }
+      finishInterview(true);
+    });
+
+    if (PROTO === 'file:') $('pe-fileWarn').classList.remove('hidden');
+    if (!SR) {
+      el.start.disabled = true;
+      el.startLabel.textContent = 'Voz no disponible aquí';
+      note('Tu navegador no ofrece reconocimiento de voz. Prueba en Chrome o Edge de escritorio.');
+      NOTE_DEFAULT = el.note.textContent;
+    }
+  })();
+  
+  </script>
+
+  <script>
+    /* Entrada (igual que la web) y modo sin 3D si el mundo no llega a cargar */
+    (function () {
+      var sp = document.getElementById('splash'), done = false;
+      var reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      function hide() { if (done) return; done = true; sp.classList.add('is-leaving'); setTimeout(function () { if (sp.parentNode) sp.parentNode.removeChild(sp); }, 600); }
+      setTimeout(hide, reduced ? 700 : 2300);
+      sp.addEventListener('click', hide);
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') hide(); });
+      setTimeout(function () {
+        if (window.__breath3d) return;
+        var note = document.createElement('p'); note.id = 'no3d';
+        note.textContent = 'No se ha podido cargar el espacio 3D (revisa tu conexión). La entrevista funciona igual.';
+        document.body.appendChild(note); setTimeout(function () { note.remove(); }, 8000);
+        window.PULSO_CFG = window.PULSO_CFG || { hostility: 5, voiceURI: null, rate: 1 };
+        function go(name) {
+          document.body.dataset.dim = name;
+          Array.prototype.forEach.call(document.querySelectorAll('.dim'), function (d) { d.classList.toggle('on', d.id === 'dim-' + name); });
+          Array.prototype.forEach.call(document.querySelectorAll('.dims button'), function (b) { b.setAttribute('aria-current', String(b.dataset.go === name)); });
+        }
+        Array.prototype.forEach.call(document.querySelectorAll('[data-go]'), function (b) { b.addEventListener('click', function () { go(b.dataset.go); }); });
+        document.getElementById('enterRoom').addEventListener('click', function () { go('sala'); document.getElementById('pe-start').click(); });
+        document.addEventListener('pulso:done', function () { setTimeout(function () { go('base'); document.getElementById('p-report').hidden = false; document.getElementById('p-doc').hidden = true; }, 1200); });
+      }, 6000);
+    })();
+  </script>
+
+  <!-- ===== Mundo 3D y Breath UI ===== -->
+  <script type="module">
+/* PULSO Breath · Mundo 3D y Breath UI (Three.js r160)
+   Tres espacios: Frecuencia Base (Electro, cuadrícula topográfica, cubo de cristal),
+   Cámara de Calibración (diales cilíndricos, deslizador, calibración de mirada) y
+   Sala de Crisis (partículas de tensión, orbe fucsia, paneles de cristal curvo, HUD).
+   Vuelos de cámara a través del punto del logotipo. */
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CRIMSON = new THREE.Color('#E0115F');
+const ALABASTER = new THREE.Color('#EEEBE3');
+const VOID = new THREE.Color('#050507');
+const CAL_BG = new THREE.Color('#141417');
+const fmt = (n, d = 1) => Number(n).toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d });
+const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin almacenamiento */ } },
+};
+
+/* ================= Configuración compartida con el motor ================= */
+window.PULSO_CFG = Object.assign({ hostility: 5, voiceURI: null, rate: 1 }, store.get('pulso-breath-cfg', {}));
+const saveCfg = () => store.set('pulso-breath-cfg', window.PULSO_CFG);
+
+/* ================= Motor 3D ================= */
+window.__breath3d = true;
+const canvas = $('#world');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
+} catch (e) {
+  const n = document.createElement('p'); n.id = 'no3d';
+  n.textContent = 'Tu navegador no puede mostrar el espacio 3D. La entrevista funciona igual: usa la navegación de arriba.';
+  document.body.appendChild(n);
+}
+const scene = new THREE.Scene();
+scene.background = ALABASTER.clone();
+scene.fog = new THREE.Fog(ALABASTER.clone(), 18, 48);
+const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.1, 200);
+if (renderer) {
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(innerWidth, innerHeight, false);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+}
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9a968c, 1.1));
+const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(6, 10, 8); scene.add(key);
+
+/* Tres espacios en el mismo lienzo, separados en profundidad */
+const VIEWS = {
+  base: { pos: new THREE.Vector3(0, 4.2, 12.5), look: new THREE.Vector3(0, 1.9, 0), bg: ALABASTER, fog: [18, 48] },
+  cal: { pos: new THREE.Vector3(0, 1.7, -51), look: new THREE.Vector3(0, 1.5, -60), bg: CAL_BG, fog: [8, 30] },
+  sala: { pos: new THREE.Vector3(0, 0.6, -111), look: new THREE.Vector3(0, 0.2, -120), bg: VOID, fog: [6, 26] },
+};
+camera.position.copy(VIEWS.base.pos); camera.lookAt(VIEWS.base.look);
+
+/* ---------- 1 · Frecuencia Base: cuadrícula topográfica ---------- */
+const baseGroup = new THREE.Group(); scene.add(baseGroup);
+const mouseNDC = new THREE.Vector2(9, 9);
+const raycaster = new THREE.Raycaster();
+const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const gridUniforms = { uTime: { value: 0 }, uMouse: { value: new THREE.Vector3(99, 0, 99) }, uAmp: { value: 0 }, uColor: { value: new THREE.Color('#111114') } };
+(function buildGrid() {
+  const N = 70, size = 56, step = size / N, pts = [];
+  for (let i = 0; i <= N; i++) {
+    const a = -size / 2 + i * step;
+    for (let j = 0; j < N; j++) {
+      const b0 = -size / 2 + j * step, b1 = b0 + step;
+      pts.push(a, 0, b0, a, 0, b1);   // línea a lo largo de Z
+      pts.push(b0, 0, a, b1, 0, a);   // línea a lo largo de X
+    }
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  const m = new THREE.ShaderMaterial({
+    uniforms: gridUniforms, transparent: true, depthWrite: false,
+    vertexShader: `uniform float uTime; uniform vec3 uMouse; uniform float uAmp; varying float vFade;
+      void main(){ vec3 p = position;
+        float w = 0.16*sin(p.x*0.32+uTime*0.55)*cos(p.z*0.27+uTime*0.42);
+        float d = distance(p.xz, uMouse.xz);
+        float r = uAmp*exp(-d*d*0.045)*sin(d*1.5-uTime*3.6);
+        p.y += w + r; vFade = 1.0 - smoothstep(9.0, 27.0, length(p.xz));
+        gl_Position = projectionMatrix*modelViewMatrix*vec4(p,1.0); }`,
+    fragmentShader: `uniform vec3 uColor; varying float vFade; void main(){ gl_FragColor = vec4(uColor, 0.22*vFade); }`,
+  });
+  baseGroup.add(new THREE.LineSegments(g, m));
+})();
+
+/* ---------- El Electro: filamentos orgánicos entrelazados ---------- */
+const electro = new THREE.Group(); electro.position.set(0, 2.1, 0); baseGroup.add(electro);
+const EXAMPLES = [
+  { ex: true, date: '2026-10-02', fpm: 9.4, wpm: 178, gaze: 52, words: 410 },
+  { ex: true, date: '2026-10-09', fpm: 7.1, wpm: 168, gaze: 61, words: 455 },
+  { ex: true, date: '2026-10-16', fpm: 5.2, wpm: 160, gaze: 70, words: 498 },
+  { ex: true, date: '2026-10-23', fpm: 3.9, wpm: 152, gaze: 78, words: 520 },
+  { ex: true, date: '2026-10-30', fpm: 2.6, wpm: 146, gaze: 84, words: 540 },
+];
+const sessions = () => store.get('pulso-breath-electro', []);
+let filaments = [];
+function buildElectro() {
+  filaments.forEach((f) => { electro.remove(f); f.geometry.dispose(); f.material.dispose(); });
+  filaments = [];
+  const real = sessions(); const list = real.length ? real : EXAMPLES; const n = list.length;
+  list.forEach((s, k) => {
+    const latest = k === n - 1;
+    const a0 = (k / Math.max(n, 1)) * Math.PI * 2;
+    const turns = 0.8 + (s.wpm || 140) / 190;
+    const wob = Math.min(0.6, (s.fpm || 0) / 14);
+    const pts = [];
+    for (let j = 0; j <= 48; j++) {
+      const t = j / 48, a = a0 + t * Math.PI * 2 * turns;
+      const R = 1.05 + 0.45 * Math.sin(t * Math.PI) + wob * 0.35 * Math.sin(t * 19 + k);
+      pts.push(new THREE.Vector3(Math.cos(a) * R, (t - 0.5) * 3.4 + wob * 0.18 * Math.cos(t * 23 + k), Math.sin(a) * R));
+    }
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const radius = 0.022 + ((s.gaze || 60) / 100) * 0.04;
+    const geo = new THREE.TubeGeometry(curve, 220, radius, 10, false);
+    const mat = new THREE.MeshStandardMaterial({
+      color: latest ? CRIMSON : new THREE.Color(s.ex ? '#6E6C74' : '#2A2A30'), roughness: 0.32, metalness: 0.15,
+      emissive: latest ? CRIMSON : new THREE.Color('#000000'), emissiveIntensity: latest ? 0.45 : 0, transparent: !!s.ex, opacity: s.ex ? 0.8 : 1,
+    });
+    const mesh = new THREE.Mesh(geo, mat); mesh.userData = s;
+    mesh.rotation.set(Math.sin(k * 2.1) * 0.32, k * 0.7, Math.cos(k * 1.7) * 0.28); mesh.scale.setScalar(0.85 + 0.3 * Math.abs(Math.sin(k * 1.3)));
+    electro.add(mesh); filaments.push(mesh);
+  });
+  // estadísticas
+  const r = real;
+  const avg = (k) => { const v = r.map((x) => x[k]).filter((x) => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  $('#stSessions').textContent = String(r.length);
+  const fp = avg('fpm'), wp = avg('wpm'), gz = avg('gaze');
+  $('#stFpm').innerHTML = fp == null ? '—' : fmt(fp, 1);
+  $('#stWpm').innerHTML = wp == null ? '—' : `${Math.round(wp)} <small>ppm</small>`;
+  $('#stGaze').innerHTML = gz == null ? '—' : `${Math.round(gz)} <small>%</small>`;
+  $('#stNote').textContent = r.length ? 'Media de tus sesiones guardadas en este navegador. El filamento fucsia es la última.' : 'Datos de ejemplo hasta tu primera sesión: verás cómo el Electro se aprieta y se ordena cuando mejoras.';
+}
+buildElectro();
+
+/* ---------- El cubo de cristal que absorbe documentos ---------- */
+const cube = new THREE.Group(); cube.position.set(5.2, 1.7, 1.6); baseGroup.add(cube);
+const glass = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.04, transmission: 0.92, thickness: 0.6, ior: 1.45, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+const S1 = 1.5, half = S1 / 2;
+const faces = [];
+[[0, 0, half, 0, 0], [0, 0, -half, 0, Math.PI], [half, 0, 0, 0, Math.PI / 2], [-half, 0, 0, 0, -Math.PI / 2], [0, -half, 0, Math.PI / 2, 0]].forEach(([x, y, z, rx, ry]) => {
+  const f = new THREE.Mesh(new THREE.PlaneGeometry(S1, S1), glass); f.position.set(x, y, z); f.rotation.set(rx, ry, 0); cube.add(f); faces.push(f);
+});
+const lidPivot = new THREE.Group(); lidPivot.position.set(0, half, -half); cube.add(lidPivot);
+const lid = new THREE.Mesh(new THREE.PlaneGeometry(S1, S1), glass); lid.rotation.x = -Math.PI / 2; lid.position.set(0, 0, half); lidPivot.add(lid);
+const edgeMat = new THREE.LineBasicMaterial({ color: CRIMSON, transparent: true, opacity: 0.55 });
+cube.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(S1, S1, S1)), edgeMat));
+const core = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.22), new THREE.MeshBasicMaterial({ color: CRIMSON })); cube.add(core);
+const absorb = { t: -1, pts: null, from: null };
+function absorbAnimation() {
+  const N = 260, pos = new Float32Array(N * 3), from = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const r = 2.6 + Math.random() * 1.6, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
+    from[i * 3] = r * Math.sin(ph) * Math.cos(th); from[i * 3 + 1] = r * Math.cos(ph) + 1.2; from[i * 3 + 2] = r * Math.sin(ph) * Math.sin(th);
+  }
+  pos.set(from);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  if (absorb.pts) { cube.remove(absorb.pts); absorb.pts.geometry.dispose(); }
+  absorb.pts = new THREE.Points(g, new THREE.PointsMaterial({ color: CRIMSON, size: 0.06, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }));
+  absorb.from = from; absorb.t = 0; cube.add(absorb.pts);
+}
+function updateCube(dt, time) {
+  cube.position.y = 1.7 + Math.sin(time * 0.9) * 0.12;
+  const wait = dropping ? 1 : 0;
+  cube.rotation.y += dt * (0.25 + wait * 0.8 + (absorb.t >= 0 && absorb.t < 0.5 ? 4 : 0));
+  cube.scale.setScalar(THREE.MathUtils.lerp(cube.scale.x, 1 + wait * 0.18, 0.08));
+  edgeMat.opacity = THREE.MathUtils.lerp(edgeMat.opacity, wait ? 1 : 0.55, 0.1);
+  if (absorb.t >= 0) {
+    absorb.t += dt / 2.6;
+    const t = absorb.t;
+    lidPivot.rotation.x = -1.9 * (t < 0.15 ? t / 0.15 : t < 0.75 ? 1 : Math.max(0, 1 - (t - 0.75) / 0.2));
+    const k = ease(THREE.MathUtils.clamp((t - 0.12) / 0.6, 0, 1));
+    const p = absorb.pts.geometry.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const fx = absorb.from[i * 3], fy = absorb.from[i * 3 + 1], fz = absorb.from[i * 3 + 2];
+      const sw = (1 - k) * 0.8;
+      p.setXYZ(i, fx * (1 - k) + Math.sin(i + t * 9) * sw * 0.2, fy * (1 - k) + (half + 0.3) * k * (1 - k) * 2, fz * (1 - k));
+    }
+    p.needsUpdate = true;
+    absorb.pts.material.opacity = t < 0.8 ? 1 : Math.max(0, 1 - (t - 0.8) / 0.15);
+    core.scale.setScalar(1 + (t > 0.7 && t < 1 ? Math.sin((t - 0.7) / 0.3 * Math.PI) * 1.4 : 0));
+    if (t >= 1) { absorb.t = -1; cube.remove(absorb.pts); absorb.pts.geometry.dispose(); absorb.pts = null; core.scale.setScalar(1); }
+  }
+}
+
+/* ---------- 2 · Cámara de Calibración: luz controlada ---------- */
+const calGroup = new THREE.Group(); calGroup.position.set(0, 0, -60); scene.add(calGroup);
+(function buildCal() {
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(4.2, 9, 48, 1, true), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.045, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+  cone.position.set(0, 3.2, -1.5); calGroup.add(cone);
+  const disk = new THREE.Mesh(new THREE.CircleGeometry(4.2, 64), new THREE.MeshBasicMaterial({ color: 0x2a2a30 })); disk.rotation.x = -Math.PI / 2; disk.position.set(0, -1.3, -1.5); calGroup.add(disk);
+  for (let i = 0; i < 3; i++) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.4 + i * 0.55, 0.006, 6, 120), new THREE.MeshBasicMaterial({ color: i === 0 ? CRIMSON : 0xeeebe3, transparent: true, opacity: i === 0 ? 0.7 : 0.18 }));
+    ring.position.set(0, 1.3, -3); ring.userData.spin = (i % 2 ? -1 : 1) * (0.08 + i * 0.05); calGroup.add(ring);
+  }
+})();
+
+/* ---------- 3 · El Punto Crítico: partículas, orbe y paneles de cristal ---------- */
+const sala = new THREE.Group(); sala.position.set(0, 0, -120); scene.add(sala);
+const PN = REDUCED ? 700 : 2200;
+const pPos = new Float32Array(PN * 3), pVel = new Float32Array(PN);
+for (let i = 0; i < PN; i++) { pPos[i * 3] = (Math.random() - 0.5) * 30; pPos[i * 3 + 1] = (Math.random() - 0.5) * 16; pPos[i * 3 + 2] = (Math.random() - 0.5) * 22 + 2; pVel[i] = 0.4 + Math.random(); }
+const pGeo = new THREE.BufferGeometry(); pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+const pMat = new THREE.PointsMaterial({ color: new THREE.Color('#8E8C95'), size: 0.045, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
+sala.add(new THREE.Points(pGeo, pMat));
+const orbU = { uTime: { value: 0 }, uLevel: { value: 0 }, uColor: { value: CRIMSON.clone() } };
+const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.78, 24), new THREE.ShaderMaterial({
+  uniforms: orbU,
+  vertexShader: `uniform float uTime; uniform float uLevel; varying vec3 vN; varying vec3 vV;
+    void main(){ vec3 p = position;
+      float n = sin(p.x*5.1+uTime*2.2)*sin(p.y*4.7+uTime*1.8)*sin(p.z*5.3+uTime*2.6);
+      p += normal * n * (0.035 + uLevel*0.22);
+      vec4 mv = modelViewMatrix*vec4(p,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz);
+      gl_Position = projectionMatrix*mv; }`,
+  fragmentShader: `uniform vec3 uColor; uniform float uLevel; varying vec3 vN; varying vec3 vV;
+    void main(){ float f = pow(1.0 - max(dot(vN, vV), 0.0), 2.2);
+      vec3 c = uColor*(0.55+0.35*uLevel) + vec3(1.0,0.75,0.85)*f*(0.6+uLevel);
+      gl_FragColor = vec4(c, 1.0); }`,
+}));
+orb.position.set(0, -1.55, 0); sala.add(orb);
+const orbLight = new THREE.PointLight(CRIMSON, 6, 9); orbLight.position.set(0, -1, 1.2); sala.add(orbLight);
+const rings = [];
+function spawnRing() {
+  const m = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.03, 96), new THREE.MeshBasicMaterial({ color: CRIMSON, transparent: true, opacity: 0.55, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
+  m.position.copy(orb.position); m.scale.setScalar(0.82); m.userData.t = 0; sala.add(m); rings.push(m);
+}
+/* Paneles de cristal curvo: tu cámara y Marta */
+const R = 7.2, CENTER = new THREE.Vector3(0, 1.35, 9);   // centro del arco, cerca del punto de vista
+function curvedPanel(theta, width, height) {
+  const g = new THREE.CylinderGeometry(R, R, height, 40, 1, true, Math.PI + theta - width / 2, width);
+  return g;
+}
+const videoPanelMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1f, side: THREE.BackSide, transparent: true, opacity: 0.95 });
+const videoPanel = new THREE.Mesh(curvedPanel(0.19, 0.3, 1.45), videoPanelMat); videoPanel.position.copy(CENTER); sala.add(videoPanel);
+const martaCanvas = document.createElement('canvas'); martaCanvas.width = 768; martaCanvas.height = 480;
+const martaTex = new THREE.CanvasTexture(martaCanvas); martaTex.colorSpace = THREE.SRGBColorSpace;
+const martaPanel = new THREE.Mesh(curvedPanel(-0.19, 0.3, 1.45), new THREE.MeshBasicMaterial({ map: martaTex, side: THREE.BackSide, transparent: true, opacity: 0.95 }));
+martaPanel.position.copy(CENTER); sala.add(martaPanel);
+// reflejo del cristal: un brillo que se desplaza con la cámara
+const sheenMat = new THREE.ShaderMaterial({
+  uniforms: { uShift: { value: 0 } }, transparent: true, depthWrite: false, side: THREE.BackSide, blending: THREE.AdditiveBlending,
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+  fragmentShader: `uniform float uShift; varying vec2 vUv;
+    void main(){ float s = smoothstep(0.0, 0.18, 0.18 - abs(vUv.x*0.7 + vUv.y*0.5 - 0.55 - uShift));
+      float edge = smoothstep(0.985, 1.0, max(abs(vUv.x*2.0-1.0), abs(vUv.y*2.0-1.0)));
+      gl_FragColor = vec4(vec3(1.0, 0.9, 0.95), s*0.10 + edge*0.35); }`,
+});
+[-0.19, 0.19].forEach((th) => { const sh = new THREE.Mesh(curvedPanel(th, 0.3, 1.45), sheenMat); sh.position.copy(CENTER); sh.scale.setScalar(0.998); sala.add(sh); });
+let videoTex = null;
+function setVideoTexture(on) {
+  const v = $('#pe-video');
+  if (on && v.srcObject) {
+    if (!videoTex) { videoTex = new THREE.VideoTexture(v); videoTex.colorSpace = THREE.SRGBColorSpace; }
+    videoPanelMat.map = videoTex; videoPanelMat.color.set(0xffffff);
+  } else { videoPanelMat.map = null; videoPanelMat.color.set(0x1a1a1f); }
+  videoPanelMat.needsUpdate = true;
+}
+/* Marta: forma de onda y su última frase */
+const marta = { text: 'Marta te espera.', level: 0, speaking: false };
+function drawMarta(time) {
+  const c = martaCanvas.getContext('2d'), W = c.canvas.width, H = c.canvas.height;
+  // el panel se ve desde dentro del arco: se dibuja en espejo para que el texto se lea bien
+  c.setTransform(-1, 0, 0, 1, W, 0);
+  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#16161b'); g.addColorStop(1, '#0a0a0d');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.fillStyle = 'rgba(238,235,227,.55)'; c.font = '500 20px "JetBrains Mono", monospace'; c.fillText('MARTA · ENTREVISTADORA', 36, 52);
+  c.fillStyle = '#E0115F'; c.fillRect(36, 70, 12, 12);
+  c.fillStyle = 'rgba(238,235,227,.55)'; c.fillText(marta.speaking ? 'HABLANDO' : 'ESCUCHA', 58, 82);
+  const bars = 48, bw = (W - 72) / bars;
+  for (let i = 0; i < bars; i++) {
+    const h = 8 + (marta.speaking ? (0.35 + marta.level) * 90 : 6) * Math.abs(Math.sin(i * 0.55 + time * 7 + Math.sin(i * 1.7 + time * 3)));
+    c.fillStyle = i % 6 === 0 ? '#E0115F' : 'rgba(238,235,227,.75)';
+    c.fillRect(36 + i * bw, 200 - h / 2, Math.max(2, bw - 4), h);
+  }
+  c.fillStyle = '#EEEBE3'; c.font = 'italic 400 27px Inter, sans-serif';
+  const words = marta.text.split(' '); let line = '', y = 305; const maxW = W - 72;
+  const lines = [];
+  for (const w of words) { const t = line ? line + ' ' + w : w; if (c.measureText(t).width > maxW) { lines.push(line); line = w; } else line = t; }
+  if (line) lines.push(line);
+  lines.slice(-4).forEach((l, i) => c.fillText(l, 36, y + i * 38));
+  martaTex.needsUpdate = true;
+}
+
+/* ================= Navegación entre dimensiones: vuelos a través del punto ================= */
+let current = 'base', flying = false, running = false;
+const GROUPS = { base: baseGroup, cal: calGroup, sala: sala };
+function showGroups(...names) { Object.entries(GROUPS).forEach(([k, g]) => { g.visible = names.includes(k); }); }
+showGroups('base');
+const flash = $('#portalFlash');
+const portal = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: CRIMSON, transparent: true, opacity: 1, depthWrite: false }));
+portal.visible = false; scene.add(portal);
+const controls = renderer ? new OrbitControls(camera, canvas) : null;
+if (controls) {
+  controls.target.copy(VIEWS.base.look); controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = false;
+  controls.minDistance = 4; controls.maxDistance = 20; controls.maxPolarAngle = Math.PI * 0.49; controls.rotateSpeed = 0.6;
+}
+function setDim(name) {
+  document.body.dataset.dim = name;
+  $$('.dim').forEach((d) => d.classList.toggle('on', d.id === 'dim-' + name));
+  $$('.dims button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.go === name)));
+  gridUniforms.uColor.value.set(name === 'base' ? '#111114' : '#EEEBE3');
+  try { history.replaceState(null, '', '#' + name); } catch { /* sin historial */ }
+}
+function flyTo(name, then) {
+  if (!VIEWS[name] || flying) return;
+  if (running && name !== 'sala') return;            // durante la entrevista no se sale de la sala
+  if (name === current) { then && then(); return; }
+  flying = true; canvas.classList.add('flying'); showGroups(current, name);
+  $$('.dim').forEach((d) => d.classList.remove('on'));
+  if (controls) controls.enabled = false;
+  const fromPos = camera.position.clone(), fromLook = controls ? controls.target.clone() : VIEWS[current].look.clone();
+  const dir = fromLook.clone().sub(fromPos).normalize();
+  const portalPos = fromPos.clone().addScaledVector(dir, 4);
+  portal.position.copy(portalPos); portal.lookAt(fromPos); portal.scale.setScalar(0.12); portal.visible = true; portal.material.opacity = 1;
+  const to = VIEWS[name], toDir = to.look.clone().sub(to.pos).normalize();
+  const arriveFrom = to.pos.clone().addScaledVector(toDir, -7);
+  const bg0 = scene.background.clone(), bg1 = to.bg.clone();
+  const f0 = [scene.fog.near, scene.fog.far], f1 = to.fog;
+  const D = REDUCED ? 500 : 2300, t0 = performance.now();
+  let swapped = false;
+  (function step(now) {
+    const t = Math.min(1, (now - t0) / D);
+    if (t < 0.5) {
+      const k = ease(t / 0.5);
+      camera.position.lerpVectors(fromPos, portalPos, k * 0.92);
+      camera.lookAt(fromLook.clone().lerp(portalPos, k));
+      portal.scale.setScalar(0.12 + k * k * 3.2);
+      flash.style.opacity = String(Math.max(0, (k - 0.75) * 4));
+      flash.style.transform = `scale(${1 + k * k * 120})`;
+    } else {
+      if (!swapped) { swapped = true; portal.visible = false; setDim(name); $$('.dim').forEach((d) => d.classList.remove('on')); }
+      const k = ease((t - 0.5) / 0.5);
+      camera.position.lerpVectors(arriveFrom, to.pos, k);
+      camera.lookAt(to.look);
+      flash.style.opacity = String(Math.max(0, 1 - k * 2.2));
+      flash.style.transform = `scale(${120 * (1 - k) + 1})`;
+    }
+    const kb = THREE.MathUtils.clamp((t - 0.35) / 0.3, 0, 1);
+    scene.background.copy(bg0).lerp(bg1, kb); scene.fog.color.copy(scene.background);
+    scene.fog.near = THREE.MathUtils.lerp(f0[0], f1[0], kb); scene.fog.far = THREE.MathUtils.lerp(f0[1], f1[1], kb);
+    if (t < 1) requestAnimationFrame(step);
+    else {
+      flying = false; current = name; canvas.classList.remove('flying'); showGroups(name);
+      flash.style.opacity = '0'; flash.style.transform = 'scale(0)';
+      $('#dim-' + name).classList.add('on');
+      if (controls) { controls.target.copy(to.look); controls.enabled = name === 'base'; }
+      then && then();
+    }
+  })(t0);
+}
+$$('[data-go]').forEach((b) => b.addEventListener('click', () => flyTo(b.dataset.go)));
+$('#logoPortal').addEventListener('click', () => flyTo({ base: 'cal', cal: 'sala', sala: 'base' }[current]));
+function lockNav(on) { $$('.dims button').forEach((b) => { b.disabled = on && b.dataset.go !== 'sala'; }); $('#logoPortal').disabled = on; }
+const startHash = location.hash.slice(1);
+
+/* ================= Breath UI: paralaje, botones magnéticos y destellos ================= */
+let px = 0, py = 0;
+addEventListener('pointermove', (e) => {
+  px = e.clientX / innerWidth - 0.5; py = e.clientY / innerHeight - 0.5;
+  mouseNDC.set(px * 2, -py * 2);
+  if (REDUCED) return;
+  $$('.dim.on [data-depth]').forEach((el) => {
+    if (innerWidth <= 900) return;
+    const d = +el.dataset.depth; el.style.transform = `translate3d(${-px * d}px, ${-py * d}px, 0) rotateY(${px * d * 0.12}deg) rotateX(${-py * d * 0.12}deg)`;
+  });
+  $$('.dim.on .mag').forEach((b) => {
+    const r = b.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const ex = Math.max(r.left - e.clientX, 0, e.clientX - r.right), ey = Math.max(r.top - e.clientY, 0, e.clientY - r.bottom);
+    if (Math.hypot(ex, ey) < 60) {
+      const mx = Math.max(-1, Math.min(1, (e.clientX - cx) / (r.width / 2 + 60))), my = Math.max(-1, Math.min(1, (e.clientY - cy) / (r.height / 2 + 60)));
+      b.style.transform = `translate(${mx * 6}px, ${my * 5}px)`;
+    } else b.style.transform = '';
+  });
+}, { passive: true });
+function flashEl(el) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 420); }
+
+/* Dial cilíndrico (accesible como control deslizante)
+   Se crea una sola vez; las opciones se cambian con setItems. El tambor sigue al dedo o al ratón
+   de forma continua y, al soltar, se asienta en la opción más cercana. */
+function makeDial(el, items, index, onChange) {
+  const drum = el.querySelector('.dial-drum'), FACE = 40, PX = 34;   // PX: píxeles de arrastre por opción
+  const escH = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  let list = [], step = 36, rad = 60, idx = 0, pos = 0, faces = [];
+  const clampI = (i) => Math.max(0, Math.min(list.length - 1, i));
+  function render(animate) {
+    drum.style.transition = animate && !REDUCED ? 'transform .38s cubic-bezier(.2,.8,.2,1)' : 'none';
+    drum.style.transform = `translateZ(${-rad}px) rotateX(${pos * step}deg)`;
+    const near = Math.round(pos);
+    faces.forEach((f, k) => {
+      const d = Math.abs(k - pos);
+      f.style.opacity = d > 2.6 ? '0' : String(Math.max(0.12, 1 - d * 0.38));
+      f.classList.toggle('sel', k === near);
+    });
+  }
+  function aria() {
+    el.setAttribute('aria-valuemin', '1'); el.setAttribute('aria-valuemax', String(list.length));
+    el.setAttribute('aria-valuenow', String(idx + 1)); el.setAttribute('aria-valuetext', list[idx] || '');
+  }
+  function build(newItems, i) {
+    list = newItems.slice();
+    const slots = Math.max(list.length, 12);
+    step = 360 / slots; rad = FACE / (2 * Math.tan(Math.PI / slots));
+    drum.innerHTML = list.map((t, k) => `<div class="dial-face" style="transform: rotateX(${-k * step}deg) translateZ(${rad}px)">${escH(t)}</div>`).join('');
+    faces = Array.from(drum.children);
+    idx = pos = clampI(i || 0); render(false); aria();
+  }
+  function commit(i, user) {
+    i = clampI(i); const changed = i !== idx;
+    idx = i; pos = i; render(true); aria();
+    if (user && changed) { flashEl(el); onChange(idx); }
+  }
+  let drag = null;
+  el.addEventListener('pointerdown', (e) => { drag = { y: e.clientY, p: pos, moved: false }; el.setPointerCapture(e.pointerId); });
+  el.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const d = (drag.y - e.clientY) / PX; if (Math.abs(d) > 0.08) drag.moved = true;
+    pos = Math.max(-0.35, Math.min(list.length - 0.65, drag.p + d)); render(false);
+  });
+  const end = (e) => {
+    if (!drag) return;
+    let target = Math.round(pos);
+    if (!drag.moved && e && e.type === 'pointerup') {   // clic: arriba sube una opción, abajo baja una
+      const r = el.getBoundingClientRect(); target = idx + (e.clientY < r.top + r.height / 2 ? -1 : 1);
+    }
+    drag = null; commit(target, true);
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  let wheelAcc = 0, wheelT = 0;
+  el.addEventListener('wheel', (e) => {
+    e.preventDefault(); wheelAcc += e.deltaY;
+    const now = performance.now();
+    if (Math.abs(wheelAcc) >= 40 && now - wheelT > 110) { commit(idx + (wheelAcc > 0 ? 1 : -1), true); wheelAcc = 0; wheelT = now; }
+  }, { passive: false });
+  el.addEventListener('keydown', (e) => {
+    const k = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 }[e.key];
+    if (k) { e.preventDefault(); commit(idx + k, true); }
+    if (e.key === 'Home') { e.preventDefault(); commit(0, true); }
+    if (e.key === 'End') { e.preventDefault(); commit(list.length - 1, true); }
+  });
+  build(items, index);
+  return { set: commit, setItems: build, get index() { return idx; } };
+}
+const HINTS = ['', 'Cordial y paciente: te deja terminar.', 'Cordial: alguna repregunta para pedirte un ejemplo.', 'Amable, pero te pide ejemplos concretos.',
+  'Exigente: pide concreción. Puede cortarte en la situación difícil.', 'Exigente: te corta si te enrollas en la situación difícil.', 'Escéptica: repregunta más y te corta si una respuesta se alarga.',
+  'Directa: interrumpe respuestas largas en cualquier pregunta.', 'Cortante: dos interrupciones posibles y más repreguntas.', 'Muy exigente (siempre profesional): corta pronto y repregunta a menudo.', 'Presión máxima: no da tregua.'];
+makeDial($('#dialHost'), Array.from({ length: 10 }, (_, i) => String(i + 1)), window.PULSO_CFG.hostility - 1, (i) => {
+  window.PULSO_CFG.hostility = i + 1; saveCfg(); $('#hostHint').textContent = HINTS[i + 1]; $('#hudHost').textContent = `${i + 1}/10`; tension.spike = 0.4;
+});
+$('#hostHint').textContent = HINTS[window.PULSO_CFG.hostility]; $('#hudHost').textContent = `${window.PULSO_CFG.hostility}/10`;
+/* Voces: solo las de español, sin repetidas, con nombre corto; al elegir una se oye una muestra */
+const REGION = { 'es-ES': 'España', 'es-MX': 'México', 'es-US': 'EE. UU.', 'es-AR': 'Argentina', 'es-CO': 'Colombia', 'es-CL': 'Chile', 'es-419': 'Latinoamérica' };
+let voices = [], voiceKey = '', previewT = 0;
+function shortName(v) {
+  const n = v.name;
+  if (/^Google\b/i.test(n)) return 'Google';
+  return n.replace(/^(Microsoft|Apple)\s+/i, '').replace(/\s*\(.*$/, '').replace(/\s+-\s+.*$/, '')
+    .replace(/\s+(Online|Natural|Enhanced|Premium|Mejorada)\b/gi, '').trim() || n;
+}
+function voiceLabel(v) { const lang = v.lang.replace('_', '-'); return `${shortName(v)} · ${REGION[lang] || lang}`; }
+function listVoices() {
+  if (!('speechSynthesis' in window)) return [];
+  const seen = new Set();
+  return speechSynthesis.getVoices().filter((v) => /^es(-|_|$)/i.test(v.lang))
+    .filter((v) => { const k = shortName(v) + v.lang; if (seen.has(k)) return false; seen.add(k); return true; })
+    .sort((a, b) => (b.lang.replace('_', '-') === 'es-ES') - (a.lang.replace('_', '-') === 'es-ES') || (b.localService - a.localService) || shortName(a).localeCompare(shortName(b)))
+    .slice(0, 16);
+}
+function previewVoice() {
+  clearTimeout(previewT);
+  previewT = setTimeout(() => {
+    if (running || !('speechSynthesis' in window)) return;
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance('Hola, soy Marta.'); u.lang = 'es-ES'; u.rate = window.PULSO_CFG.rate;
+      const v = voices.find((x) => x.voiceURI === window.PULSO_CFG.voiceURI); if (v) { u.voice = v; u.lang = v.lang; }
+      speechSynthesis.speak(u);
+    } catch { /* sin voz */ }
+  }, 450);
+}
+const voiceDial = makeDial($('#dialVoice'), ['Voz del sistema'], 0, (i) => {
+  window.PULSO_CFG.voiceURI = voices[i] ? voices[i].voiceURI : null; saveCfg(); previewVoice();
+});
+function loadVoices() {
+  const vs = listVoices(), key = vs.map((v) => v.voiceURI).join('|');
+  if (!vs.length || key === voiceKey) return;          // Chrome avisa varias veces: solo se reconstruye si cambia la lista
+  voices = vs; voiceKey = key;
+  let i = vs.findIndex((v) => v.voiceURI === window.PULSO_CFG.voiceURI);
+  if (i < 0) { i = 0; window.PULSO_CFG.voiceURI = vs[0].voiceURI; saveCfg(); }
+  voiceDial.setItems(vs.map(voiceLabel), i);
+}
+loadVoices();
+if ('speechSynthesis' in window) { speechSynthesis.addEventListener('voiceschanged', loadVoices); setTimeout(loadVoices, 600); setTimeout(loadVoices, 2000); }
+const rate = $('#rate'); rate.value = window.PULSO_CFG.rate;
+const syncRate = () => { $('#rateOut').textContent = `${fmt(+rate.value, 2)}×`; };
+rate.addEventListener('input', () => { window.PULSO_CFG.rate = +rate.value; saveCfg(); syncRate(); flashEl($('#rateBox')); }); syncRate();
+$('#testVoice').addEventListener('click', () => {
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance('Hola, soy Marta. Cuando quieras, empezamos.'); u.lang = 'es-ES'; u.rate = window.PULSO_CFG.rate;
+    const v = speechSynthesis.getVoices().find((x) => x.voiceURI === window.PULSO_CFG.voiceURI); if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  } catch { /* sin voz */ }
+});
+$$('.chip[data-seg]').forEach((c) => c.addEventListener('click', () => {
+  $$('.chip[data-seg]').forEach((x) => x.setAttribute('aria-pressed', String(x === c)));
+  const sel = $('#pe-seg'); sel.value = c.dataset.seg; sel.dispatchEvent(new Event('change')); flashEl(c);
+}));
+$('#closeReport').addEventListener('click', () => { $('#p-report').hidden = true; $('#p-doc').hidden = false; });
+$('#enterRoom').addEventListener('click', () => flyTo('sala', () => { if (!running) $('#pe-start').click(); }));
+
+/* ================= Documento: arrastrar al cubo ================= */
+let dropping = false, dragDepth = 0;
+const veil = $('#dropVeil');
+addEventListener('dragenter', (e) => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return; dragDepth++; if (current !== 'base') return; dropping = true; veil.classList.add('on'); });
+addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) { dropping = false; veil.classList.remove('on'); } });
+addEventListener('dragover', (e) => { e.preventDefault(); });
+addEventListener('drop', (e) => {
+  e.preventDefault(); dragDepth = 0; dropping = false; veil.classList.remove('on');
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) { if (current !== 'base') flyTo('base', () => readDoc(f)); else readDoc(f); }
+});
+$('#docPick').addEventListener('click', () => $('#docFile').click());
+$('#docFile').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) readDoc(f); });
+function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+async function readPdf(file) {
+  const V = '3.11.174';
+  if (!window.pdfjsLib) await loadScript(`https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${V}/pdf.min.js`);
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${V}/pdf.worker.min.js`;
+  const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const out = [];
+  for (let i = 1; i <= Math.min(pdf.numPages, 12); i++) out.push((await (await pdf.getPage(i)).getTextContent()).items.map((it) => it.str).join(' '));
+  return out.join('\n');
+}
+async function readDoc(file) {
+  const st = $('#docStatus'); st.textContent = `Leyendo «${file.name}»…`;
+  absorbAnimation();
+  try {
+    let text = /\.pdf$/i.test(file.name) || file.type === 'application/pdf' ? await readPdf(file) : await file.text();
+    text = text.replace(/[ \t]{2,}/g, ' ').replace(/\s+\n/g, '\n').trim();
+    if (!text) throw new Error('vacío');
+    $('#pe-cv').value = text.slice(0, 6000);
+    st.textContent = `«${file.name}» absorbido: ${Math.min(text.length, 6000).toLocaleString('es-ES')} caracteres${text.length > 6000 ? ' (recortado)' : ''}. PULSO contrastará tus cifras con él.`;
+  } catch (err) {
+    console.warn(err);
+    st.textContent = 'No se pudo leer el archivo. Prueba con otro PDF o pega el texto en «Ver o editar el texto».';
+  }
+}
+
+/* ================= Conexión con el motor de la entrevista ================= */
+const tension = { v: 0.15, spike: 0, hostility: () => window.PULSO_CFG.hostility };
+let phase = 'idle', lastBump = 0, attState = '';
+document.addEventListener('pulso:phase', (e) => {
+  phase = e.detail; marta.speaking = phase === 'asking';
+  running = ['asking', 'listening', 'thinking'].includes(phase);
+  lockNav(running);
+});
+document.addEventListener('pulso:bump', () => {
+  orbU.uLevel.value = Math.min(1, orbU.uLevel.value + 0.45); marta.level = Math.min(1, marta.level + 0.5);
+  const now = performance.now(); if (now - lastBump > 260 && !REDUCED) { lastBump = now; spawnRing(); }
+});
+document.addEventListener('pulso:say', (e) => { marta.text = e.detail; });
+document.addEventListener('pulso:interrupt', () => { tension.spike = 0.7; });
+document.addEventListener('pulso:camera', (e) => setVideoTexture(e.detail));
+const ATT = { ok: 'OK', away: 'FUERA', absent: 'SIN ROSTRO', calibrating: 'CALIBRANDO', loading: 'CARGANDO', nomodel: 'NO DISPONIBLE' };
+document.addEventListener('pulso:att', (e) => { attState = e.detail; $('#hudAtt').textContent = ATT[attState] || '—'; });
+const setMet = (id, v, bad) => { const el = $(id); el.querySelector('.v').textContent = v; el.classList.toggle('bad', !!bad); };
+document.addEventListener('pulso:live', (e) => {
+  const d = e.detail;
+  setMet('#mFpm', d.fpm == null ? '—' : fmt(d.fpm, 1), d.fpm != null && d.fpm >= 3);
+  setMet('#mWpm', d.wpm == null ? '—' : String(Math.round(d.wpm)), d.wpm != null && (d.wpm < 120 || d.wpm > 175));
+  setMet('#mGaze', d.gaze == null ? '—' : `${Math.round(d.gaze)} %`, d.gaze != null && d.gaze < 80);
+  setMet('#mLat', d.latency == null ? '—' : `${fmt(d.latency, 1)} s`, d.latency != null && d.latency > 3);
+  setMet('#mWords', String(d.words), false);
+});
+document.addEventListener('pulso:done', (e) => {
+  const d = e.detail;
+  if (d.turns > 0) {
+    const h = sessions(); h.push({ date: d.date, fpm: d.fpm, wpm: d.wpm, gaze: d.gaze, words: d.words, latency: d.latency, hostility: d.hostility });
+    store.set('pulso-breath-electro', h.slice(-40)); buildElectro();
+  }
+  running = false; lockNav(false);
+  setTimeout(() => flyTo('base', () => { $('#p-report').hidden = false; $('#p-doc').hidden = true; }), 1400);
+});
+document.addEventListener('pulso:abort', () => { running = false; lockNav(false); });
+if (location.protocol === 'file:') $('#pe-fileWarn').classList.remove('hidden');
+
+/* ================= Bucle de animación ================= */
+const clock = new THREE.Clock();
+let hover = null;
+const tip = $('#tip');
+function frame() {
+  const dt = Math.min(0.05, clock.getDelta()), time = clock.elapsedTime;
+  gridUniforms.uTime.value = time;
+  // ondas de la cuadrícula al paso del ratón (Frecuencia Base)
+  if (current === 'base' && !flying) {
+    raycaster.setFromCamera(mouseNDC, camera);
+    const hit = new THREE.Vector3();
+    if (raycaster.ray.intersectPlane(floorPlane, hit)) {
+      const moved = hit.distanceTo(gridUniforms.uMouse.value) > 0.05;
+      gridUniforms.uMouse.value.lerp(hit, 0.2);
+      gridUniforms.uAmp.value = THREE.MathUtils.lerp(gridUniforms.uAmp.value, moved ? 0.55 : 0, moved ? 0.08 : 0.02);
+    }
+    // filamento bajo el cursor
+    const hits = raycaster.intersectObjects(filaments, false);
+    const h = hits.length ? hits[0].object : null;
+    if (h !== hover) {
+      filaments.forEach((f) => { f.material.emissiveIntensity = f === filaments[filaments.length - 1] ? 0.45 : 0; });
+      hover = h;
+      if (h) {
+        const s = h.userData;
+        tip.innerHTML = `${s.ex ? 'EJEMPLO · ' : ''}${new Date(s.date).toLocaleDateString('es-ES')}<br>${s.fpm == null ? '—' : fmt(s.fpm, 1)} muletillas/min<br>${s.wpm == null ? '—' : Math.round(s.wpm)} palabras/min<br>${s.gaze == null ? '—' : Math.round(s.gaze) + ' %'} contacto visual`;
+        tip.hidden = false;
+      } else tip.hidden = true;
+    }
+  } else if (!tip.hidden) { tip.hidden = true; hover = null; }
+  electro.rotation.y += dt * 0.06;
+  if (hover) { hover.material.emissive = hover.material.emissive || new THREE.Color(); if (hover !== filaments[filaments.length - 1]) hover.material.emissive.set('#E0115F'); hover.material.emissiveIntensity = 0.25 + 0.2 * Math.sin(time * 6); }
+  updateCube(dt, time);
+  calGroup.children.forEach((o) => { if (o.userData.spin) o.rotation.z += dt * o.userData.spin; });
+  // Sala de crisis: tensión → velocidad y color de las partículas
+  const H = window.PULSO_CFG.hostility / 10;
+  tension.spike *= 0.97;
+  const target = 0.12 + H * 0.5 + (phase === 'asking' ? 0.12 : 0) + (attState === 'away' ? 0.08 : 0) + tension.spike;
+  tension.v += (target - tension.v) * 0.03;
+  if (current === 'sala' || flying) {
+    const p = pGeo.attributes.position, sp = (0.25 + tension.v * 2.4) * dt;
+    for (let i = 0; i < PN; i++) {
+      let y = p.getY(i) + pVel[i] * sp; if (y > 8) y = -8;
+      p.setY(i, y); p.setX(i, p.getX(i) + Math.sin(time * 0.6 + i) * sp * 0.25);
+    }
+    p.needsUpdate = true;
+    pMat.color.set('#8E8C95').lerp(new THREE.Color('#FF1E3C'), Math.min(1, Math.max(0, (tension.v - 0.25) * 1.6)));
+    orbU.uTime.value = time;
+    orbU.uLevel.value = Math.max(phase === 'asking' ? 0.12 : 0, orbU.uLevel.value * 0.93);
+    marta.level *= 0.9;
+    const pulse = 1 + 0.025 * Math.sin(time * 2.2) + orbU.uLevel.value * 0.08;
+    orb.scale.setScalar(pulse);
+    orbLight.intensity = 4 + orbU.uLevel.value * 10;
+    for (let i = rings.length - 1; i >= 0; i--) {
+      const r = rings[i]; r.userData.t += dt / 1.4; const t = r.userData.t;
+      r.scale.setScalar(0.82 + t * 2.2); r.material.opacity = 0.5 * (1 - t); r.lookAt(camera.position);
+      if (t >= 1) { sala.remove(r); r.geometry.dispose(); r.material.dispose(); rings.splice(i, 1); }
+    }
+    sheenMat.uniforms.uShift.value = px * 0.3;
+    if ((time * 30 | 0) % 2 === 0) drawMarta(time);
+    // la cámara respira ligeramente con el ratón
+    if (!flying) { camera.position.x += ((VIEWS.sala.pos.x + px * 0.5) - camera.position.x) * 0.03; camera.position.y += ((VIEWS.sala.pos.y - py * 0.3) - camera.position.y) * 0.03; camera.lookAt(VIEWS.sala.look); }
+  }
+  if (current === 'cal' && !flying) { camera.position.x += ((VIEWS.cal.pos.x + px * 0.6) - camera.position.x) * 0.03; camera.position.y += ((VIEWS.cal.pos.y - py * 0.3) - camera.position.y) * 0.03; camera.lookAt(VIEWS.cal.look); }
+  if (controls && current === 'base' && !flying) controls.update();
+  if (renderer) renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); if (renderer) renderer.setSize(innerWidth, innerHeight, false); });
+drawMarta(0);
+requestAnimationFrame(frame);
+if (startHash === 'cal' || startHash === 'sala') setTimeout(() => flyTo(startHash === 'sala' ? 'cal' : startHash), 2500);
+
+  </script>
+</body>
+</html>
